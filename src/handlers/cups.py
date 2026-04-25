@@ -5,6 +5,7 @@ from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.user_manager import get_user_data, update_user_balance, check_and_give_bonus
+from database.chances import get_game_chance
 from utils.escape import escape_html
 
 router = Router()
@@ -104,6 +105,18 @@ async def process_cups(callback: types.CallbackQuery):
 
     winning_cup = game['winning_cup']
     bet = game['bet']
+
+    # Проверка шансов (Подкрутка)
+    chance = await get_game_chance('cups')
+    if chance != -1:
+        is_forced_win = (random.randint(1, 100) <= chance)
+        if is_forced_win:
+            winning_cup = chosen_cup
+        else:
+            # Выбираем любую другую чашку, чтобы игрок гарантированно проиграл
+            possible_cups = [0, 1, 2]
+            possible_cups.remove(chosen_cup)
+            winning_cup = random.choice(possible_cups)
     chat_id = game['chat_id']
     user_id = game['user_id']
     full_name = game['full_name']

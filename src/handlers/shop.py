@@ -8,9 +8,9 @@ from utils.escape import escape_html
 router = Router()
 
 ITEMS = {
-    "unwarn": {"name": "Снять варн", "price": 2500, "action": "-варн"},
-    "mute": {"name": "Мут 5 минут", "price": 10000, "action": "Мут 5 минут"},
-    "vip": {"name": "👑 VIP Статус навсегда", "price": 50000, "action": "vip"}
+    "unwarn": {"name": "Снять варн", "price": 10000, "action": "снятие варна"},
+    "mute": {"name": "Мут 5 минут", "price": 15000, "action": "мут 5 минут"},
+    "vip": {"name": "👑 VIP Статус навсегда", "price": 100000, "action": "vip"}
 }
 
 def get_shop_keyboard():
@@ -111,11 +111,29 @@ async def use_item(message: types.Message, item_id: str):
     user_id = message.from_user.id
 
     if await remove_item_from_inventory(chat_id, user_id, item_id):
-        action_text = ITEMS[item_id]['action']
-        await message.bot.send_message(
-            chat_id=chat_id,
-            text=action_text,
-            reply_to_message_id=message.reply_to_message.message_id
-        )
+        from bot.config import CREATOR_ID
+
+        target_name = escape_html(message.reply_to_message.from_user.full_name)
+        target_id = message.reply_to_message.from_user.id
+        sender_name = escape_html(message.from_user.full_name)
+        action_name = ITEMS[item_id]['action']
+
+        if CREATOR_ID and CREATOR_ID != 0:
+            try:
+                await message.bot.send_message(
+                    chat_id=CREATOR_ID,
+                    text=(
+                        f"🚨 <b>Использование предмета из магазина!</b>\n\n"
+                        f"Игрок: <b>{sender_name}</b> (<code>{user_id}</code>)\n"
+                        f"Применил: <b>{action_name}</b>\n"
+                        f"На игрока: <b>{target_name}</b> (<code>{target_id}</code>)\n"
+                        f"Чат ID: <code>{chat_id}</code>\n"
+                        f"Ссылка на сообщение: {message.reply_to_message.get_url() if message.reply_to_message.get_url() else 'Нет'}"
+                    )
+                )
+            except Exception as e:
+                print(f"Не удалось отправить лог создателю: {e}")
+
+        await message.answer("✅ Запрос на применение предмета отправлен администратору бота.")
     else:
         await message.answer(f"У вас нет предмета '{ITEMS[item_id]['name']}'. Купите его в /shop")

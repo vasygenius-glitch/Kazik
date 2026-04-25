@@ -196,6 +196,102 @@ async def cmd_delvip(message: types.Message):
     await ref.update({'is_vip': False})
     await message.answer(f"Пользователь {target_name} лишен статуса VIP.")
 
+from database.whitelist import add_to_whitelist, remove_from_whitelist, get_whitelist
+
+@router.message(Command("allow"))
+async def cmd_allow(message: types.Message):
+    if not is_creator(message):
+        return
+
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("Укажите ID группы. Пример: <code>/allow -100123456789</code>")
+        return
+
+    try:
+        chat_id = int(args[1])
+        success = await add_to_whitelist(chat_id)
+        if success:
+            await message.answer(f"✅ Группа <code>{chat_id}</code> добавлена в белый список.")
+        else:
+            await message.answer(f"Группа <code>{chat_id}</code> уже в белом списке.")
+    except ValueError:
+        await message.answer("ID группы должен быть числом.")
+
+@router.message(Command("disallow"))
+async def cmd_disallow(message: types.Message):
+    if not is_creator(message):
+        return
+
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("Укажите ID группы. Пример: <code>/disallow -100123456789</code>")
+        return
+
+    try:
+        chat_id = int(args[1])
+        success = await remove_from_whitelist(chat_id)
+        if success:
+            await message.answer(f"❌ Группа <code>{chat_id}</code> удалена из белого списка.")
+        else:
+            await message.answer(f"Группы <code>{chat_id}</code> нет в белом списке.")
+    except ValueError:
+        await message.answer("ID группы должен быть числом.")
+
+@router.message(Command("whitelist"))
+async def cmd_whitelist(message: types.Message):
+    if not is_creator(message):
+        return
+
+    whitelist = await get_whitelist()
+    if not whitelist:
+        await message.answer("Белый список пуст.")
+        return
+
+    text = "📝 <b>Разрешенные группы:</b>\n\n"
+    for chat_id in whitelist:
+        text += f"<code>{chat_id}</code>\n"
+
+    await message.answer(text)
+
+from database.chances import set_game_chance, get_game_chance
+
+@router.message(Command("setchance"))
+async def cmd_setchance(message: types.Message):
+    if not is_creator(message):
+        return
+
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer(
+            "Использование: <code>/setchance <игра> <процент></code>\n"
+            "Доступные игры: <code>slots</code>, <code>cups</code>, <code>roulette</code>\n"
+            "Процент: 0-100 (установите -1 для честного рандома).\n"
+            "Пример: <code>/setchance slots 50</code>"
+        )
+        return
+
+    game_name = args[1].lower()
+    valid_games = ['slots', 'cups', 'roulette']
+
+    if game_name not in valid_games:
+        await message.answer(f"Неизвестная игра. Доступные: {', '.join(valid_games)}")
+        return
+
+    try:
+        percentage = int(args[2])
+        if percentage < -1 or percentage > 100:
+            await message.answer("Процент должен быть от -1 до 100.")
+            return
+
+        await set_game_chance(game_name, percentage)
+        if percentage == -1:
+            await message.answer(f"Для игры <b>{game_name}</b> установлен честный рандом.")
+        else:
+            await message.answer(f"Для игры <b>{game_name}</b> установлен принудительный шанс победы: <b>{percentage}%</b>")
+    except ValueError:
+        await message.answer("Процент должен быть числом.")
+
 @router.message(Command("info"))
 async def cmd_info(message: types.Message):
     if not is_creator(message):

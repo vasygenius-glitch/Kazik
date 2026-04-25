@@ -3,6 +3,7 @@ from aiogram import Router, types
 from aiogram.filters import Command
 
 from database.user_manager import get_user_data, update_user_balance, check_and_give_bonus
+from database.chances import get_game_chance
 from utils.escape import escape_html
 
 router = Router()
@@ -49,7 +50,24 @@ async def cmd_roulette(message: types.Message):
 
     await update_user_balance(chat_id, user_id, -bet)
 
-    result_number = random.randint(1, 36)
+    # Проверка шансов (Подкрутка)
+    chance = await get_game_chance('roulette')
+    if chance != -1:
+        is_forced_win = (random.randint(1, 100) <= chance)
+        if is_forced_win:
+            # Даем победу (разброс от 0 до 4)
+            diff = random.randint(0, 4)
+            result_number = guess + random.choice([-diff, diff])
+            if result_number < 1: result_number = 1
+            if result_number > 36: result_number = 36
+        else:
+            # Принудительный проигрыш (разброс больше 4)
+            result_number = random.randint(1, 36)
+            while abs(result_number - guess) <= 4:
+                result_number = random.randint(1, 36)
+    else:
+        result_number = random.randint(1, 36)
+
     diff = abs(result_number - guess)
 
     if diff == 0:

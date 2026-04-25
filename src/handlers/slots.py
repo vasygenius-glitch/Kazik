@@ -4,6 +4,7 @@ from aiogram import Router, types
 from aiogram.filters import Command
 
 from database.user_manager import get_user_data, update_user_balance, check_and_give_bonus
+from database.chances import get_game_chance
 from utils.escape import escape_html
 
 router = Router()
@@ -63,12 +64,50 @@ async def cmd_slots(message: types.Message):
 
     await asyncio.sleep(0.5)
 
+    # Проверка подкрученного шанса
+    chance = await get_game_chance('slots')
+    is_forced_win = False
+
+    if chance != -1:
+        if random.randint(1, 100) <= chance:
+            is_forced_win = True
+
     # Final result
-    final_slots = [
-        random.choice(EMOJIS),
-        random.choice(EMOJIS),
-        random.choice(EMOJIS)
-    ]
+    if is_forced_win:
+        # Принудительная победа (выдаем случайную выигрышную комбинацию)
+        win_types = ["jackpot", "mega", "three", "pair_mega", "pair_7"]
+        chosen_win = random.choice(win_types)
+
+        if chosen_win == "jackpot":
+            final_slots = ["7️⃣", "7️⃣", "7️⃣"]
+        elif chosen_win == "mega":
+            sym = random.choice(["💎", "🔔"])
+            final_slots = [sym, sym, sym]
+        elif chosen_win == "three":
+            sym = random.choice(["🍒", "🍋", "🍉", "🍇"])
+            final_slots = [sym, sym, sym]
+        elif chosen_win == "pair_mega":
+            sym = random.choice(["💎", "🔔"])
+            other = random.choice(["🍒", "🍋", "🍉", "🍇"])
+            final_slots = [sym, sym, other]
+            random.shuffle(final_slots)
+        else: # pair_7
+            other = random.choice(["🍒", "🍋", "🍉", "🍇"])
+            final_slots = ["7️⃣", "7️⃣", other]
+            random.shuffle(final_slots)
+    else:
+        # Обычный честный рандом (но если шанс был установлен, и игрок не попал в % - он принудительно проигрывает)
+        final_slots = [
+            random.choice(EMOJIS),
+            random.choice(EMOJIS),
+            random.choice(EMOJIS)
+        ]
+
+        # Если шанс был жестко задан (например 10%), а игрок в него не попал, мы должны гарантировать проигрыш,
+        # чтобы реальный винрейт соответствовал установленному шансу.
+        if chance != -1:
+            while final_slots[0] == final_slots[1] or final_slots[1] == final_slots[2] or final_slots[0] == final_slots[2]:
+                final_slots = [random.choice(["🍒", "🍋"]), random.choice(["🍉", "🍇"]), random.choice(["💎", "🔔"])]
 
     profit = 0
     multiplier_text = ""
