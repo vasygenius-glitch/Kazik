@@ -76,14 +76,38 @@ async def cmd_slots(message: types.Message):
     # Logic
     if final_slots[0] == final_slots[1] == final_slots[2]:
         if final_slots[0] == "7️⃣":
+            profit = bet * 20
+            multiplier_text = "ДЖЕКПОТ! x20"
+        elif final_slots[0] in ["💎", "🔔"]:
             profit = bet * 10
-            multiplier_text = "ДЖЕКПОТ! x10"
+            multiplier_text = "Мега Куш! x10"
         else:
             profit = bet * 5
             multiplier_text = "Три в ряд! x5"
-    elif final_slots[0] == final_slots[1] or final_slots[1] == final_slots[2] or final_slots[0] == final_slots[2]:
-        profit = int(bet * 1.5)
-        multiplier_text = "Пара! x1.5"
+    elif final_slots[0] == final_slots[1]:
+        pair_emoji = final_slots[0]
+        if pair_emoji == "7️⃣":
+            profit = bet * 2
+            multiplier_text = "Пара Семёрок! x2"
+        elif pair_emoji in ["💎", "🔔"]:
+            profit = int(bet * 1.5)
+            multiplier_text = "Крупная пара! x1.5"
+    elif final_slots[1] == final_slots[2]:
+        pair_emoji = final_slots[1]
+        if pair_emoji == "7️⃣":
+            profit = bet * 2
+            multiplier_text = "Пара Семёрок! x2"
+        elif pair_emoji in ["💎", "🔔"]:
+            profit = int(bet * 1.5)
+            multiplier_text = "Крупная пара! x1.5"
+    elif final_slots[0] == final_slots[2]:
+        pair_emoji = final_slots[0]
+        if pair_emoji == "7️⃣":
+            profit = bet * 2
+            multiplier_text = "Пара Семёрок! x2"
+        elif pair_emoji in ["💎", "🔔"]:
+            profit = int(bet * 1.5)
+            multiplier_text = "Крупная пара! x1.5"
 
     result_text = ""
     is_vip = data.get('is_vip', False)

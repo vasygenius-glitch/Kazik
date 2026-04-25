@@ -13,9 +13,9 @@ active_cups_games = {}
 
 def get_cups_keyboard(game_id: str):
     builder = InlineKeyboardBuilder()
-    builder.button(text="🪣 1", callback_data=f"cups_{game_id}_0")
-    builder.button(text="🪣 2", callback_data=f"cups_{game_id}_1")
-    builder.button(text="🪣 3", callback_data=f"cups_{game_id}_2")
+    builder.button(text="🪣 1", callback_data=f"cups|{game_id}|0")
+    builder.button(text="🪣 2", callback_data=f"cups|{game_id}|1")
+    builder.button(text="🪣 3", callback_data=f"cups|{game_id}|2")
     return builder.as_markup()
 
 @router.message(Command("cups"))
@@ -56,7 +56,7 @@ async def cmd_cups(message: types.Message):
 
     await update_user_balance(chat_id, user_id, -bet)
 
-    game_id = f"{chat_id}_{user_id}_{message.message_id}"
+    game_id = f"{chat_id}-{user_id}-{message.message_id}"
     winning_cup = random.randint(0, 2)
 
     active_cups_games[game_id] = {
@@ -78,10 +78,11 @@ async def cmd_cups(message: types.Message):
 
     await message.answer(text, reply_markup=get_cups_keyboard(game_id))
 
-@router.callback_query(F.data.startswith("cups_"))
+@router.callback_query(F.data.startswith("cups|"))
 async def process_cups(callback: types.CallbackQuery):
-    parts = callback.data.split("_")
+    parts = callback.data.split("|")
     if len(parts) != 3:
+        await callback.answer()
         return
 
     game_id = parts[1]
@@ -138,3 +139,4 @@ async def process_cups(callback: types.CallbackQuery):
     )
 
     await callback.message.edit_text(final_text)
+    await callback.answer()

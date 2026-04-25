@@ -117,6 +117,7 @@ async def process_bj_hit(callback: types.CallbackQuery):
     if player_score > 21:
         game = active_games.pop(game_id, None)
         if not game:
+            await callback.answer()
             return
         text = (
             f"<b>Перебор!</b> Вы проиграли {game['bet']} сыроежек.\n\n"
@@ -137,6 +138,8 @@ async def process_bj_hit(callback: types.CallbackQuery):
         )
         await callback.message.edit_text(text, reply_markup=get_bj_keyboard(game_id))
 
+    await callback.answer()
+
 @router.callback_query(F.data.startswith("bj_stand_"))
 async def process_bj_stand(callback: types.CallbackQuery):
     game_id = callback.data.replace("bj_stand_", "")
@@ -152,6 +155,8 @@ async def process_bj_stand(callback: types.CallbackQuery):
     game = active_games.pop(game_id, None)
     if game:
         await finish_dealer_turn(callback, game)
+
+    await callback.answer()
 
 async def finish_dealer_turn(callback: types.CallbackQuery, game: dict):
     player_score = calculate_score(game['player_cards'])
