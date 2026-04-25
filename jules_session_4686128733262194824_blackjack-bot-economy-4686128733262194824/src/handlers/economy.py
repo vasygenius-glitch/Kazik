@@ -13,8 +13,10 @@ async def cmd_balance(message: types.Message):
 
     data = await get_user_data(chat_id, user_id, full_name)
     balance = data.get('balance', 0)
+    is_vip = data.get('is_vip', False)
 
-    await message.answer(f"💰 Ваш баланс: <b>{balance}</b> сыроежек.")
+    vip_icon = " 👑 VIP" if is_vip else ""
+    await message.answer(f"💰 Ваш баланс: <b>{balance}</b> сыроежек.{vip_icon}")
 
 @router.message(Command("pay"))
 async def cmd_pay(message: types.Message):

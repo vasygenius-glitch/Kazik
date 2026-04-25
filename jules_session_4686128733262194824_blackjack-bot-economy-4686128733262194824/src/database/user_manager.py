@@ -24,7 +24,8 @@ async def get_user_data(chat_id, user_id, full_name=None):
             'inventory': {},
             'is_banned': False,
             'hide_in_top': False,
-            'full_name': default_name
+            'full_name': default_name,
+            'is_vip': False
         }
         await ref.set(default_data)
         return default_data
@@ -49,12 +50,15 @@ async def check_and_give_bonus(chat_id, user_id, full_name=None):
 
     if current_time - last_bonus >= 86400:
         ref = get_user_ref(chat_id, user_id)
-        new_balance = data.get('balance', 5000) + 450
+        is_vip = data.get('is_vip', False)
+        bonus_amount = 1000 if is_vip else 450
+
+        new_balance = data.get('balance', 5000) + bonus_amount
         await ref.update({
             'balance': new_balance,
             'last_bonus_time': current_time
         })
-        return True, 450
+        return True, bonus_amount
     return False, 0
 
 async def add_item_to_inventory(chat_id, user_id, item_name):

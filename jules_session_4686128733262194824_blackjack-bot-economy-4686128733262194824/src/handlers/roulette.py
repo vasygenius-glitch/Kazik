@@ -53,21 +53,30 @@ async def cmd_roulette(message: types.Message):
     diff = abs(result_number - guess)
 
     if diff == 0:
-        win_amount = bet * 3
+        total_win = bet * 3
         multiplier_text = "x3 (Точное совпадение!)"
     elif diff <= 2:
-        win_amount = int(bet * 1.5)
+        total_win = int(bet * 1.5)
         multiplier_text = "x1.5 (Разница 1-2 числа)"
     elif diff <= 4:
-        win_amount = int(bet * 1.1)
+        total_win = int(bet * 1.1)
         multiplier_text = "x1.1 (Разница 3-4 числа)"
     else:
-        win_amount = 0
+        total_win = 0
         multiplier_text = "Проигрыш (Слишком далеко)"
 
-    if win_amount > 0:
-        await update_user_balance(chat_id, user_id, win_amount)
-        result_text = f"<b>Вы выиграли {win_amount - bet} сыроежек!</b>"
+    if total_win > 0:
+        profit = total_win - bet
+        is_vip = data.get('is_vip', False)
+        vip_bonus_text = ""
+        if is_vip:
+            vip_profit_bonus = int(profit * 0.1)
+            profit += vip_profit_bonus
+            vip_bonus_text = f" (👑 VIP бонус: +{vip_profit_bonus})"
+
+        final_win_amount = bet + profit
+        await update_user_balance(chat_id, user_id, final_win_amount)
+        result_text = f"<b>Вы выиграли {profit} сыроежек!</b>{vip_bonus_text}"
     else:
         result_text = f"<b>Вы проиграли {bet} сыроежек!</b>"
 

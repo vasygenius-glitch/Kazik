@@ -27,7 +27,8 @@ async def cmd_top(message: types.Message):
             if not data.get('hide_in_top', False):
                 users_list.append({
                     'name': data.get('full_name', 'Unknown'),
-                    'balance': data.get('balance', 0)
+                    'balance': data.get('balance', 0),
+                    'is_vip': data.get('is_vip', False)
                 })
 
         users_list.sort(key=lambda x: x['balance'], reverse=True)
@@ -39,7 +40,8 @@ async def cmd_top(message: types.Message):
 
         text = "🏆 ТОП-10 ИГРОКОВ ЧАТА 🏆\n\n"
         for i, u in enumerate(top_10, 1):
-            text += f"{i}. {u['name']} — {u['balance']} сыроежек\n"
+            vip_icon = " 👑" if u['is_vip'] else ""
+            text += f"{i}. {u['name']}{vip_icon} — {u['balance']} сыроежек\n"
 
         await message.answer(text)
     except Exception as e:
@@ -157,3 +159,74 @@ async def cmd_show(message: types.Message):
     ref = get_user_ref(chat_id, user_id)
     await ref.update({'hide_in_top': False})
     await message.answer("Вы теперь отображаетесь в топе.")
+
+@router.message(Command("setvip"))
+async def cmd_setvip(message: types.Message):
+    if not is_creator(message):
+        return
+
+    if not message.reply_to_message:
+        await message.answer("Ответьте на сообщение пользователя.")
+        return
+
+    chat_id = message.chat.id
+    target_id = message.reply_to_message.from_user.id
+    target_name = escape_html(message.reply_to_message.from_user.full_name)
+
+    await get_user_data(chat_id, target_id, target_name)
+    ref = get_user_ref(chat_id, target_id)
+    await ref.update({'is_vip': True})
+    await message.answer(f"Пользователь {target_name} получил статус 👑 VIP!")
+
+@router.message(Command("delvip"))
+async def cmd_delvip(message: types.Message):
+    if not is_creator(message):
+        return
+
+    if not message.reply_to_message:
+        await message.answer("Ответьте на сообщение пользователя.")
+        return
+
+    chat_id = message.chat.id
+    target_id = message.reply_to_message.from_user.id
+    target_name = escape_html(message.reply_to_message.from_user.full_name)
+
+    await get_user_data(chat_id, target_id, target_name)
+    ref = get_user_ref(chat_id, target_id)
+    await ref.update({'is_vip': False})
+    await message.answer(f"Пользователь {target_name} лишен статуса VIP.")
+
+@router.message(Command("info"))
+async def cmd_info(message: types.Message):
+    if not is_creator(message):
+        return
+
+    if not message.reply_to_message:
+        await message.answer("Ответьте на сообщение пользователя.")
+        return
+
+    chat_id = message.chat.id
+    target_id = message.reply_to_message.from_user.id
+    target_name = escape_html(message.reply_to_message.from_user.full_name)
+
+    data = await get_user_data(chat_id, target_id, target_name)
+
+    balance = data.get('balance', 0)
+    is_vip = data.get('is_vip', False)
+    is_banned = data.get('is_banned', False)
+    inventory = data.get('inventory', {})
+
+    inv_text = ", ".join([f"{k}: {v}" for k, v in inventory.items()]) if inventory else "Пусто"
+    vip_text = "Да 👑" if is_vip else "Нет"
+    ban_text = "Да 🚫" if is_banned else "Нет"
+
+    text = (
+        f"📊 <b>Информация о пользователе {target_name}</b>\n\n"
+        f"ID: <code>{target_id}</code>\n"
+        f"Баланс: {balance} сыроежек\n"
+        f"VIP статус: {vip_text}\n"
+        f"Бан: {ban_text}\n"
+        f"Инвентарь: {inv_text}"
+    )
+
+    await message.answer(text)

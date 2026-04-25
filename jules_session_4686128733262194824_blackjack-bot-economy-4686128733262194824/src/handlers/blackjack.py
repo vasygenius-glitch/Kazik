@@ -64,10 +64,18 @@ async def cmd_bj(message: types.Message):
     dealer_score = calculate_score(dealer_cards)
 
     if player_score == 21:
-        win_amount = int(bet + (bet * 1.5))
+        profit = int(bet * 1.5)
+        is_vip = data.get('is_vip', False)
+        vip_bonus_text = ""
+        if is_vip:
+            vip_profit_bonus = int(profit * 0.1)
+            profit += vip_profit_bonus
+            vip_bonus_text = f" (👑 VIP бонус: +{vip_profit_bonus})"
+
+        win_amount = bet + profit
         await update_user_balance(chat_id, user_id, win_amount)
         text = (
-            f"{bonus_text}<b>БЛЭКДЖЕК!</b> Вы выиграли {int(bet * 1.5)} сыроежек.\n\n"
+            f"{bonus_text}<b>БЛЭКДЖЕК!</b> Вы выиграли {profit} сыроежек{vip_bonus_text}.\n\n"
             f"Ваши карты: {format_cards(player_cards)} (21)\n"
             f"Карты дилера: {format_cards(dealer_cards)} ({dealer_score})"
         )
@@ -94,11 +102,11 @@ async def cmd_bj(message: types.Message):
 @router.callback_query(F.data.startswith("bj_hit_"))
 async def process_bj_hit(callback: types.CallbackQuery):
     game_id = callback.data.replace("bj_hit_", "")
-    if game_id not in active_games:
+    game = active_games.get(game_id)
+    if not game:
         await callback.answer("Эта игра уже завершена или не найдена.", show_alert=True)
         return
 
-    game = active_games[game_id]
     if callback.from_user.id != game['user_id']:
         await callback.answer("Это не ваша игра!", show_alert=True)
         return
@@ -107,16 +115,20 @@ async def process_bj_hit(callback: types.CallbackQuery):
     player_score = calculate_score(game['player_cards'])
 
     if player_score > 21:
+        game = active_games.pop(game_id, None)
+        if not game:
+            return
         text = (
             f"<b>Перебор!</b> Вы проиграли {game['bet']} сыроежек.\n\n"
             f"Игрок: {game['full_name']}\n"
             f"Ваши карты: {format_cards(game['player_cards'])} ({player_score})\n"
             f"Карты дилера: {format_cards(game['dealer_cards'])} ({calculate_score(game['dealer_cards'])})"
         )
-        del active_games[game_id]
         await callback.message.edit_text(text)
     elif player_score == 21:
-        await finish_dealer_turn(callback, game_id, game)
+        game = active_games.pop(game_id, None)
+        if game:
+            await finish_dealer_turn(callback, game)
     else:
         text = (
             f"Играет: {game['full_name']} | Ставка: {game['bet']}\n\n"
@@ -128,18 +140,20 @@ async def process_bj_hit(callback: types.CallbackQuery):
 @router.callback_query(F.data.startswith("bj_stand_"))
 async def process_bj_stand(callback: types.CallbackQuery):
     game_id = callback.data.replace("bj_stand_", "")
-    if game_id not in active_games:
+    game = active_games.get(game_id)
+    if not game:
         await callback.answer("Эта игра уже завершена или не найдена.", show_alert=True)
         return
 
-    game = active_games[game_id]
     if callback.from_user.id != game['user_id']:
         await callback.answer("Это не ваша игра!", show_alert=True)
         return
 
-    await finish_dealer_turn(callback, game_id, game)
+    game = active_games.pop(game_id, None)
+    if game:
+        await finish_dealer_turn(callback, game)
 
-async def finish_dealer_turn(callback: types.CallbackQuery, game_id: str, game: dict):
+async def finish_dealer_turn(callback: types.CallbackQuery, game: dict):
     player_score = calculate_score(game['player_cards'])
     dealer_cards = game['dealer_cards']
 
@@ -152,9 +166,19 @@ async def finish_dealer_turn(callback: types.CallbackQuery, game_id: str, game: 
     user_id = game['user_id']
     chat_id = game['chat_id']
 
+    data = await get_user_data(chat_id, user_id)
+    is_vip = data.get('is_vip', False)
+
     if dealer_score > 21 or player_score > dealer_score:
-        result = f"<b>Вы выиграли!</b> (+{bet} сыроежек)"
-        await update_user_balance(chat_id, user_id, bet * 2)
+        profit = bet
+        vip_bonus_text = ""
+        if is_vip:
+            vip_profit_bonus = int(profit * 0.1)
+            profit += vip_profit_bonus
+            vip_bonus_text = f" (👑 VIP бонус: +{vip_profit_bonus})"
+
+        result = f"<b>Вы выиграли!</b> (+{profit} сыроежек){vip_bonus_text}"
+        await update_user_balance(chat_id, user_id, bet + profit)
     elif player_score < dealer_score:
         result = f"<b>Вы проиграли!</b> (-{bet} сыроежек)"
     else:
@@ -168,5 +192,4 @@ async def finish_dealer_turn(callback: types.CallbackQuery, game_id: str, game: 
         f"Карты дилера: {format_cards(dealer_cards)} ({dealer_score})"
     )
 
-    del active_games[game_id]
     await callback.message.edit_text(text)
