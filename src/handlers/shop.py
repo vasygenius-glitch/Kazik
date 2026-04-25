@@ -2,14 +2,15 @@ from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.user_manager import get_user_data, update_user_balance, add_item_to_inventory, remove_item_from_inventory
+from database.user_manager import get_user_data, update_user_balance, add_item_to_inventory, remove_item_from_inventory, get_user_ref
 from utils.escape import escape_html
 
 router = Router()
 
 ITEMS = {
     "unwarn": {"name": "Снять варн", "price": 2500, "action": "-варн"},
-    "mute": {"name": "Мут 5 минут", "price": 10000, "action": "Мут 5 минут"}
+    "mute": {"name": "Мут 5 минут", "price": 10000, "action": "Мут 5 минут"},
+    "vip": {"name": "👑 VIP Статус навсегда", "price": 50000, "action": "vip"}
 }
 
 def get_shop_keyboard():
@@ -62,10 +63,19 @@ async def process_buy(callback: types.CallbackQuery):
         await callback.answer(f"Недостаточно сыроежек! Нужно {item['price']}.", show_alert=True)
         return
 
-    await update_user_balance(chat_id, user_id, -item['price'])
-    await add_item_to_inventory(chat_id, user_id, item_id)
+    if item_id == "vip":
+        if data.get('is_vip', False):
+            await callback.answer("У вас уже есть VIP статус!", show_alert=True)
+            return
 
-    await callback.answer(f"Вы успешно купили: {item['name']}!", show_alert=True)
+        await update_user_balance(chat_id, user_id, -item['price'])
+        ref = get_user_ref(chat_id, user_id)
+        await ref.update({'is_vip': True})
+        await callback.answer("Вы успешно купили 👑 VIP Статус!", show_alert=True)
+    else:
+        await update_user_balance(chat_id, user_id, -item['price'])
+        await add_item_to_inventory(chat_id, user_id, item_id)
+        await callback.answer(f"Вы успешно купили: {item['name']}!", show_alert=True)
 
     data = await get_user_data(chat_id, user_id)
     new_balance = data.get('balance', 0)

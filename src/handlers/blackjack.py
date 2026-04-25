@@ -120,10 +120,7 @@ async def process_bj_hit(callback: types.CallbackQuery):
             await callback.answer()
             return
         text = (
-            f"<b>Перебор!</b> Вы проиграли {game['bet']} сыроежек.\n\n"
-            f"Игрок: {game['full_name']}\n"
-            f"Ваши карты: {format_cards(game['player_cards'])} ({player_score})\n"
-            f"Карты дилера: {format_cards(game['dealer_cards'])} ({calculate_score(game['dealer_cards'])})"
+            f"<b>БЛЭКДЖЕК: Игрок {game['full_name']} перебрал и проиграл {game['bet']} сыроежек.</b>"
         )
         await callback.message.edit_text(text)
     elif player_score == 21:
@@ -182,19 +179,16 @@ async def finish_dealer_turn(callback: types.CallbackQuery, game: dict):
             profit += vip_profit_bonus
             vip_bonus_text = f" (👑 VIP бонус: +{vip_profit_bonus})"
 
-        result = f"<b>Вы выиграли!</b> (+{profit} сыроежек){vip_bonus_text}"
+        result = f"выиграл {profit} сыроежек{vip_bonus_text}"
         await update_user_balance(chat_id, user_id, bet + profit)
     elif player_score < dealer_score:
-        result = f"<b>Вы проиграли!</b> (-{bet} сыроежек)"
+        result = f"проиграл {bet} сыроежек"
     else:
-        result = "<b>Ничья!</b> (Возврат ставки)"
+        result = f"сыграл в ничью (возврат {bet} сыроежек)"
         await update_user_balance(chat_id, user_id, bet)
 
     text = (
-        f"{result}\n\n"
-        f"Игрок: {game['full_name']}\n"
-        f"Ваши карты: {format_cards(game['player_cards'])} ({player_score})\n"
-        f"Карты дилера: {format_cards(dealer_cards)} ({dealer_score})"
+        f"<b>БЛЭКДЖЕК: Игрок {game['full_name']} {result}!</b>"
     )
 
     await callback.message.edit_text(text)
