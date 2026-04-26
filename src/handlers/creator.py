@@ -1,4 +1,4 @@
-from aiogram import Router, types
+from aiogram import Router, types, Bot
 from aiogram.filters import Command
 
 from database.db import get_db
@@ -281,7 +281,6 @@ async def cmd_disallow(message: types.Message):
     except ValueError:
         await message.answer("ID группы должен быть числом.")
 
-from aiogram import Bot
 from aiogram.filters.chat_member_updated import ChatMemberUpdatedFilter, IS_NOT_MEMBER, MEMBER, ADMINISTRATOR
 
 @router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> MEMBER))
