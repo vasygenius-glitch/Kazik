@@ -26,6 +26,18 @@ def init_db(key_path):
             def document(self, name):
                 return MockDocument(self.data, str(name))
 
+            async def get(self):
+                class MockDocStream:
+                    def __init__(self, data):
+                        self._data = data
+                    def to_dict(self): return self._data
+
+                results = []
+                for doc_id, doc_data in self.data.items():
+                    if '_data' in doc_data:
+                        results.append(MockDocStream(doc_data['_data']))
+                return results
+
             async def stream(self):
                 class MockDocStream:
                     def __init__(self, data):
