@@ -15,6 +15,7 @@ from handlers.whitelist_middleware import WhitelistMiddleware
 
 
 
+
 async def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     dp = Dispatcher()
@@ -24,18 +25,26 @@ async def main():
     except Exception as e:
         print(f"Ошибка БД: {e}")
 
-    # Настройка прокси для PythonAnywhere через переменные окружения
-    # Это заставит aiohttp использовать нативный прокси, минуя глючные SOCKS коннекторы
-    os.environ["HTTP_PROXY"] = "http://proxy.server:3128"
-    os.environ["HTTPS_PROXY"] = "http://proxy.server:3128"
+    # Важно: Чтобы избежать ошибки 503 от aiohttp_socks, мы отключаем SSL проверку
+    # и используем встроенный параметр proxy.
 
-    # Используем trust_env=True, чтобы aiohttp подхватил настройки из os.environ
-    from aiohttp import ClientSession, TCPConnector
+    proxy_url = "http://proxy.server:3128"
 
-    # Отключаем ssl проверку, так как прокси PA иногда ругается на сертификаты
-    connector = TCPConnector(ssl=False)
-    client_session = ClientSession(connector=connector, trust_env=True)
-    session = AiohttpSession(session=client_session)
+    # Мы создаем AiohttpSession с явным прокси. Aiogram сам подхватит его.
+    # Но мы должны передать аргументы для aiohttp.TCPConnector, чтобы отключить SSL.
+    from aiohttp import BasicAuth
+
+    # Проверка на PythonAnywhere:
+    if "PYTHONANYWHERE_SITE" in os.environ or "Goga22doga" in __file__:
+        print(f"Запуск на PythonAnywhere, настраиваю прокси: {proxy_url}")
+
+        # Monkey patch для aiogram, чтобы он НЕ использовал aiohttp_socks
+        import aiogram.client.session.aiohttp as aiohttp_session_module
+        aiohttp_session_module.aiohttp_socks = None
+
+        session = AiohttpSession(proxy=proxy_url)
+    else:
+        session = AiohttpSession()
 
     bot = Bot(
         token=BOT_TOKEN,
@@ -47,7 +56,7 @@ async def main():
     dp.callback_query.outer_middleware(WhitelistMiddleware())
     register_all_handlers(dp)
 
-    print("Бот запускается через системный прокси PythonAnywhere...")
+    print("Бот запускается...")
 
     try:
         await bot.get_me()
