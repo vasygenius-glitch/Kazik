@@ -10,6 +10,15 @@ from database.chances import get_game_chance
 from utils.escape import escape_html
 
 router = Router()
+
+async def schedule_delete(msg):
+    await asyncio.sleep(40)
+    try:
+        if hasattr(msg, 'delete'):
+            await msg.delete()
+    except:
+        pass
+
 secure_random = secrets.SystemRandom()
 
 active_cups_games = {}

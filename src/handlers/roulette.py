@@ -1,3 +1,4 @@
+import asyncio
 import random
 import secrets
 from aiogram import Router, types
@@ -8,6 +9,15 @@ from database.chances import get_game_chance
 from utils.escape import escape_html
 
 router = Router()
+
+async def schedule_delete(msg):
+    await asyncio.sleep(40)
+    try:
+        if hasattr(msg, 'delete'):
+            await msg.delete()
+    except:
+        pass
+
 secure_random = secrets.SystemRandom()
 
 @router.message(Command("roulette"))
@@ -30,6 +40,11 @@ async def cmd_roulette(message: types.Message):
         bet = int(args[1])
         guess = int(args[2])
         if bet < 100:
+            await message.answer("Минимальная ставка — 100 сыроежек.")
+            return
+        if bet > 50000000:
+            await message.answer("Максимальная ставка — 50 000 000 сыроежек.")
+            return
             await message.answer("Минимальная ставка — 100 сыроежек.")
             return
         if not (1 <= guess <= 36):
@@ -108,4 +123,5 @@ async def cmd_roulette(message: types.Message):
         f"Множитель: {multiplier_text}"
     )
 
-    await message.answer(text)
+    msg = await message.answer(text)
+    asyncio.create_task(schedule_delete(msg))

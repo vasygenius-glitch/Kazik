@@ -1,5 +1,7 @@
 from database.db import get_db
 
+
+
 _whitelist_cache = None
 
 async def get_whitelist():
@@ -11,20 +13,29 @@ async def get_whitelist():
     ref = db.collection('bot_settings').document('whitelist')
     doc = await ref.get()
     if doc.exists:
-        _whitelist_cache = doc.to_dict().get('allowed_chats', [])
+        data = doc.to_dict()
+        # Migrate old format (list) to new format (dict) if necessary
+        allowed = data.get('allowed_chats', {})
+        if isinstance(allowed, list):
+            _whitelist_cache = {int(k): "Unknown Group" for k in allowed}
+            await ref.set({'allowed_chats': _whitelist_cache}, merge=True)
+        else:
+            _whitelist_cache = {int(k): v for k, v in allowed.items()}
     else:
-        _whitelist_cache = []
+        _whitelist_cache = {}
     return _whitelist_cache
 
-async def add_to_whitelist(chat_id: int):
+async def add_to_whitelist(chat_id: int, chat_title: str = "Unknown Group"):
     global _whitelist_cache
     db = get_db()
     ref = db.collection('bot_settings').document('whitelist')
     whitelist = await get_whitelist()
     if chat_id not in whitelist:
-        whitelist.append(chat_id)
+        whitelist[chat_id] = chat_title
         _whitelist_cache = whitelist
-        await ref.set({'allowed_chats': whitelist}, merge=True)
+        # Firestore keys must be strings
+        save_data = {str(k): v for k, v in whitelist.items()}
+        await ref.set({'allowed_chats': save_data}, merge=True)
         return True
     return False
 
@@ -34,11 +45,13 @@ async def remove_from_whitelist(chat_id: int):
     ref = db.collection('bot_settings').document('whitelist')
     whitelist = await get_whitelist()
     if chat_id in whitelist:
-        whitelist.remove(chat_id)
+        del whitelist[chat_id]
         _whitelist_cache = whitelist
-        await ref.set({'allowed_chats': whitelist}, merge=True)
+        save_data = {str(k): v for k, v in whitelist.items()}
+        await ref.set({'allowed_chats': save_data}, merge=True)
         return True
     return False
+
 
 async def log_unauthorized_chat(chat_id: int, chat_title: str):
     db = get_db()

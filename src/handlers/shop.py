@@ -8,9 +8,17 @@ from utils.escape import escape_html
 router = Router()
 
 ITEMS = {
-    "unwarn": {"name": "Снять варн", "price": 10000, "action": "снятие варна"},
+    "lada": {"name": "🚗 Lada Priora", "price": 250000, "action": "none"},
+    "bmw": {"name": "🚕 BMW M5", "price": 1500000, "action": "none"},
+    "bugatti": {"name": "🏎 Bugatti Chiron", "price": 10000000, "action": "none"},
+    "vip": {"name": "💎 Статус VIP", "price": 5000000, "action": "vip"},
+    "shawarma": {"name": "🏪 Ларёк с шаурмой", "price": 100000, "action": "business", "income": 10000},
+    "carwash": {"name": "🚿 Автомойка", "price": 500000, "action": "business", "income": 60000},
+    "restaurant": {"name": "🍽 Ресторан", "price": 2000000, "action": "business", "income": 300000},
+    "dealership": {"name": "🚙 Автосалон", "price": 10000000, "action": "business", "income": 1500000},
+    "casino": {"name": "🎰 Казино", "price": 50000000, "action": "business", "income": 10000000},
     "mute": {"name": "Мут 5 минут", "price": 15000, "action": "мут 5 минут"},
-    "vip": {"name": "👑 VIP Статус навсегда", "price": 100000, "action": "vip"}
+    "unwarn": {"name": "Снять варн", "price": 10000, "action": "снять варн"}
 }
 
 def get_shop_keyboard():
@@ -59,7 +67,15 @@ async def process_buy(callback: types.CallbackQuery):
     data = await get_user_data(chat_id, user_id)
     balance = data.get('balance', 0)
 
+
+    if item.get('action') == "business" or item.get('action') == "none":
+        inventory = data.get('inventory', {})
+        if inventory.get(item_id, 0) >= 2:
+            await callback.answer(f"У вас уже есть максимальное количество (2 шт.) этого предмета!", show_alert=True)
+            return
+
     if balance < item['price']:
+
         await callback.answer(f"Недостаточно сыроежек! Нужно {item['price']}.", show_alert=True)
         return
 

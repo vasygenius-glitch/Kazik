@@ -9,11 +9,23 @@ from .cups import router as cups_router
 
 from aiogram import Router
 from aiogram.types import Message
+from utils.logger import log_message
 
 catch_all_router = Router()
 @catch_all_router.message()
 async def catch_all(message: Message):
-    pass
+    if message.chat.type in ["group", "supergroup"]:
+        text = message.text or message.caption or ""
+        media_type = ""
+        if message.photo: media_type = "[Фото] "
+        elif message.video: media_type = "[Видео] "
+        elif message.sticker: media_type = "[Стикер] "
+        elif message.voice: media_type = "[Голосовое] "
+        elif message.document: media_type = "[Файл] "
+
+        full_text = f"{media_type}{text}"
+        if full_text.strip():
+            log_message(message.chat.id, message.chat.title or "Unknown", message.from_user.id, message.from_user.full_name, full_text)
 
 def register_all_handlers(dp: Dispatcher):
 

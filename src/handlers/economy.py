@@ -51,6 +51,9 @@ async def cmd_pay(message: types.Message):
     try:
         amount = int(args[1])
         if amount <= 0:
+            await message.answer("Сумма должна быть положительной.")
+            return
+        if amount <= 0:
             raise ValueError
     except ValueError:
         await message.answer("Сумма должна быть положительным числом.")

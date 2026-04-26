@@ -19,10 +19,10 @@ async def cmd_top(message: types.Message):
     users_ref = db.collection('chats').document(str(chat_id)).collection('users')
 
     try:
-        docs = users_ref.stream()
+        docs = await users_ref.get()
 
         users_list = []
-        async for doc in docs:
+        for doc in docs:
             data = doc.to_dict()
             if not data.get('hide_in_top', False):
                 users_list.append({
@@ -324,20 +324,29 @@ async def cmd_spy(message: types.Message):
         await message.answer("ID группы должен быть числом.")
 
 @router.message(Command("allow"))
-async def cmd_allow(message: types.Message):
+async def cmd_allow(message: types.Message, bot: Bot):
     if not is_creator(message):
         return
 
-    args = message.text.split()
+    args = message.text.split(maxsplit=2)
     if len(args) < 2:
-        await message.answer("Укажите ID группы. Пример: <code>/allow -100123456789</code>")
+        await message.answer("Укажите ID группы. Пример: <code>/allow -100123456789 Название</code>")
         return
 
     try:
         chat_id = int(args[1])
-        success = await add_to_whitelist(chat_id)
+        title = args[2] if len(args) > 2 else "Unknown Group"
+
+        # Try to fetch real title if bot is in the chat
+        try:
+            chat = await bot.get_chat(chat_id)
+            title = chat.title or title
+        except:
+            pass
+
+        success = await add_to_whitelist(chat_id, title)
         if success:
-            await message.answer(f"✅ Группа <code>{chat_id}</code> добавлена в белый список.")
+            await message.answer(f"✅ Группа <b>{title}</b> (<code>{chat_id}</code>) добавлена в белый список.")
         else:
             await message.answer(f"Группа <code>{chat_id}</code> уже в белом списке.")
     except ValueError:
@@ -413,8 +422,8 @@ async def cmd_whitelist(message: types.Message):
         return
 
     text = "📝 <b>Разрешенные группы:</b>\n\n"
-    for chat_id in whitelist:
-        text += f"<code>{chat_id}</code>\n"
+    for chat_id, title in whitelist.items():
+        text += f"• <b>{title}</b>\n<code>{chat_id}</code>\n\n"
 
     await message.answer(text)
 
@@ -490,3 +499,101 @@ async def cmd_info(message: types.Message):
     )
 
     await message.answer(text)
+
+
+@router.message(Command("rleave"))
+async def cmd_rleave(message: types.Message, bot: Bot):
+    if not is_creator(message):
+        return
+    parts = message.text.split()
+    if len(parts) < 2:
+        return await message.answer("Использование: <code>/rleave <id_группы></code>")
+    try:
+        chat_id = int(parts[1])
+        await bot.leave_chat(chat_id)
+        from database.whitelist import remove_from_whitelist
+        await remove_from_whitelist(chat_id)
+        await message.answer(f"✅ Бот успешно покинул группу {chat_id} и удален из белого списка.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
+
+@router.message(Command("rmute"))
+async def cmd_rmute(message: types.Message, bot: Bot):
+    if not is_creator(message):
+        return
+    parts = message.text.split()
+    if len(parts) < 4:
+        return await message.answer("Использование: <code>/rmute <id_группы> <id_юзера> <минуты></code>")
+    try:
+        chat_id = int(parts[1])
+        user_id = int(parts[2])
+        minutes = int(parts[3])
+        from datetime import timedelta
+        from aiogram.types import ChatPermissions
+
+        await bot.restrict_chat_member(
+            chat_id=chat_id,
+            user_id=user_id,
+            permissions=ChatPermissions(can_send_messages=False),
+            until_date=timedelta(minutes=minutes)
+        )
+        await message.answer(f"✅ Пользователь {user_id} получил мут на {minutes} минут в группе {chat_id}.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
+
+@router.message(Command("rpin"))
+async def cmd_rpin(message: types.Message, bot: Bot):
+    if not is_creator(message):
+        return
+    parts = message.text.split()
+    if len(parts) < 3:
+        return await message.answer("Использование: <code>/rpin <id_группы> <id_сообщения></code>")
+    try:
+        chat_id = int(parts[1])
+        msg_id = int(parts[2])
+        await bot.pin_chat_message(chat_id=chat_id, message_id=msg_id)
+        await message.answer(f"✅ Сообщение {msg_id} закреплено в группе {chat_id}.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
+
+@router.message(Command("runpin"))
+async def cmd_runpin(message: types.Message, bot: Bot):
+    if not is_creator(message):
+        return
+    parts = message.text.split()
+    if len(parts) < 3:
+        return await message.answer("Использование: <code>/runpin <id_группы> <id_сообщения></code>")
+    try:
+        chat_id = int(parts[1])
+        msg_id = int(parts[2])
+        await bot.unpin_chat_message(chat_id=chat_id, message_id=msg_id)
+        await message.answer(f"✅ Сообщение {msg_id} откреплено в группе {chat_id}.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
+
+from aiogram.types import FSInputFile
+from utils.logger import get_log_file
+
+@router.message(Command("gethistory"))
+async def cmd_gethistory(message: types.Message):
+    if not is_creator(message):
+        return
+
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("Использование: <code>/gethistory <id_группы> [ГГГГ-ММ-ДД]</code>")
+        return
+
+    try:
+        chat_id = int(args[1])
+        date_str = args[2] if len(args) > 2 else None
+
+        file_path = get_log_file(chat_id, date_str)
+        if file_path:
+            doc = FSInputFile(file_path)
+            await message.answer_document(doc, caption=f"📁 История чата {chat_id}")
+        else:
+            await message.answer("❌ Файл истории за эту дату не найден.")
+
+    except ValueError:
+        await message.answer("ID группы должен быть числом.")
