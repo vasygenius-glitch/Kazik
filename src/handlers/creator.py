@@ -11,42 +11,6 @@ router = Router()
 def is_creator(message: types.Message):
     return message.from_user.username == CREATOR_USERNAME
 
-@router.message(Command("top"))
-async def cmd_top(message: types.Message):
-    chat_id = message.chat.id
-    db = get_db()
-
-    users_ref = db.collection('chats').document(str(chat_id)).collection('users')
-
-    try:
-        docs = await users_ref.get()
-
-        users_list = []
-        for doc in docs:
-            data = doc.to_dict()
-            if not data.get('hide_in_top', False):
-                users_list.append({
-                    'name': data.get('full_name', 'Unknown'),
-                    'balance': data.get('balance', 0),
-                    'is_vip': data.get('is_vip', False)
-                })
-
-        users_list.sort(key=lambda x: x['balance'], reverse=True)
-        top_10 = users_list[:10]
-
-        if not top_10:
-            await message.answer("Топ пуст.")
-            return
-
-        text = "🏆 ТОП-10 ИГРОКОВ ЧАТА 🏆\n\n"
-        for i, u in enumerate(top_10, 1):
-            vip_icon = " 👑" if u['is_vip'] else ""
-            text += f"{i}. {u['name']}{vip_icon} — {u['balance']} сыроежек\n"
-
-        await message.answer(text)
-    except Exception as e:
-        print(f"Ошибка при получении топа: {e}")
-        await message.answer("Топ временно недоступен.")
 
 @router.message(Command("give"))
 async def cmd_give(message: types.Message):

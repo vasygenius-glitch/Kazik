@@ -1,93 +1,51 @@
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore_async
+import aiosqlite
 import os
 
-db = None
+db_pool = None
 
-def init_db(key_path):
-    global db
-    if not os.path.exists(key_path):
-        print(f"ВНИМАНИЕ: Файл ключа Firebase {key_path} не найден!")
-        print("Бот будет работать в режиме мок-базы, или упадет при запросах.")
-        class MockDB:
-            def __init__(self):
-                self.data = {}
+async def init_db(db_path="database.db"):
+    global db_pool
+    # Initialize the database asynchronously
+    db_pool = await aiosqlite.connect(db_path)
 
-            def collection(self, name):
-                return MockCollection(self.data, name)
+    # Enable dict rows for easier access (like Firestore's to_dict())
+    db_pool.row_factory = aiosqlite.Row
 
-        class MockCollection:
-            def __init__(self, parent_dict, name):
-                if name not in parent_dict:
-                    parent_dict[name] = {}
-                self.data = parent_dict[name]
+    await db_pool.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            chat_id INTEGER,
+            user_id INTEGER,
+            full_name TEXT,
+            balance INTEGER DEFAULT 500,
+            last_bonus_time REAL DEFAULT 0,
+            last_work_time REAL DEFAULT 0,
+            last_crime_time REAL DEFAULT 0,
+            inventory TEXT DEFAULT '{}',
+            is_banned BOOLEAN DEFAULT 0,
+            hide_in_top BOOLEAN DEFAULT 0,
+            is_vip BOOLEAN DEFAULT 0,
+            PRIMARY KEY (chat_id, user_id)
+        )
+    """)
 
-            def document(self, name):
-                return MockDocument(self.data, str(name))
+    await db_pool.execute("""
+        CREATE TABLE IF NOT EXISTS bot_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value TEXT
+        )
+    """)
 
-            async def get(self):
-                class MockDocStream:
-                    def __init__(self, data):
-                        self._data = data
-                    def to_dict(self): return self._data
-
-                results = []
-                for doc_id, doc_data in self.data.items():
-                    if '_data' in doc_data:
-                        results.append(MockDocStream(doc_data['_data']))
-                return results
-
-            async def stream(self):
-                class MockDocStream:
-                    def __init__(self, data):
-                        self._data = data
-                    def to_dict(self): return self._data
-
-                for doc_id, doc_data in self.data.items():
-                    # Return only docs that actually have data (not just subcollections)
-                    if '_data' in doc_data:
-                        yield MockDocStream(doc_data['_data'])
-
-        class MockDocument:
-            def __init__(self, parent_dict, name):
-                if name not in parent_dict:
-                    parent_dict[name] = {}
-                self.doc_node = parent_dict[name]
-
-            def collection(self, name):
-                if '_subcollections' not in self.doc_node:
-                    self.doc_node['_subcollections'] = {}
-                return MockCollection(self.doc_node['_subcollections'], name)
-
-            async def get(self):
-                class MockDocRes:
-                    def __init__(self, exists, data=None):
-                        self.exists = exists
-                        self._data = data or {}
-                    def to_dict(self): return self._data
-
-                if '_data' in self.doc_node:
-                    return MockDocRes(True, self.doc_node['_data'])
-                return MockDocRes(False)
-
-            async def set(self, data, merge=False):
-                if merge and '_data' in self.doc_node:
-                    self.doc_node['_data'].update(data)
-                else:
-                    self.doc_node['_data'] = data
-
-            async def update(self, data):
-                if '_data' in self.doc_node:
-                    self.doc_node['_data'].update(data)
-        db = MockDB()
-        return db
-
-    cred = credentials.Certificate(key_path)
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app(cred)
-    db = firestore_async.client()
-    return db
+    await db_pool.commit()
+    print(f"✅ База данных SQLite ({db_path}) успешно инициализирована.")
+    return db_pool
 
 def get_db():
-    return db
+    global db_pool
+    if db_pool is None:
+        raise Exception("Database not initialized. Call init_db first.")
+    return db_pool
+
+async def close_db():
+    global db_pool
+    if db_pool:
+        await db_pool.close()

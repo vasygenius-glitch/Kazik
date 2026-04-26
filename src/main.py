@@ -21,7 +21,7 @@ async def main():
     dp = Dispatcher()
 
     try:
-        init_db(FIREBASE_KEY_PATH)
+        await init_db()
     except Exception as e:
         print(f"Ошибка БД: {e}")
 
@@ -66,6 +66,8 @@ async def main():
         print(f"❌ Критическая ошибка соединения: {e}")
     finally:
         await bot.session.close()
+        from database.db import close_db
+        await close_db()
 if __name__ == "__main__":
     try:
         asyncio.run(main())

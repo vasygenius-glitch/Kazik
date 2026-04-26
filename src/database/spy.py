@@ -1,4 +1,5 @@
 from database.db import get_db
+import json
 
 _spy_cache = None
 
@@ -8,18 +9,20 @@ async def get_spy_chats() -> list:
         return _spy_cache
 
     db = get_db()
-    ref = db.collection('bot_settings').document('spy')
-    doc = await ref.get()
-    if doc.exists:
-        _spy_cache = doc.to_dict().get('chats', [])
+    async with db.execute("SELECT setting_value FROM bot_settings WHERE setting_key = 'spy_chats'") as cursor:
+        row = await cursor.fetchone()
+
+    if row:
+        _spy_cache = json.loads(row['setting_value'])
     else:
         _spy_cache = []
+        await db.execute("INSERT INTO bot_settings (setting_key, setting_value) VALUES ('spy_chats', '[]')")
+        await db.commit()
+
     return _spy_cache
 
 async def toggle_spy(chat_id: int) -> bool:
     global _spy_cache
-    db = get_db()
-    ref = db.collection('bot_settings').document('spy')
     chats = await get_spy_chats()
 
     is_enabled = False
@@ -30,5 +33,7 @@ async def toggle_spy(chat_id: int) -> bool:
         is_enabled = True
 
     _spy_cache = chats
-    await ref.set({'chats': chats}, merge=True)
+    db = get_db()
+    await db.execute("UPDATE bot_settings SET setting_value = ? WHERE setting_key = 'spy_chats'", (json.dumps(chats),))
+    await db.commit()
     return is_enabled
