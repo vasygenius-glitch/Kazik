@@ -241,7 +241,8 @@ async def cmd_disallow(message: types.Message):
 from aiogram import Bot
 from aiogram.filters.chat_member_updated import ChatMemberUpdatedFilter, IS_NOT_MEMBER, MEMBER, ADMINISTRATOR
 
-@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> MEMBER) | ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> ADMINISTRATOR))
+@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> MEMBER))
+@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> ADMINISTRATOR))
 async def bot_added_to_chat(event: types.ChatMemberUpdated, bot: Bot):
     chat_id = event.chat.id
     chat_title = event.chat.title or "Unknown"
