@@ -1,4 +1,4 @@
-from aiogram import Router, F, types
+from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -95,14 +95,14 @@ async def process_buy(callback: types.CallbackQuery):
     await callback.message.edit_text(text, reply_markup=get_shop_keyboard())
 
 @router.message(Command("unwarn"))
-async def cmd_unwarn(message: types.Message):
-    await use_item(message, "unwarn")
+async def cmd_unwarn(message: types.Message, bot: Bot):
+    await use_item(message, "unwarn", bot)
 
 @router.message(Command("mute"))
-async def cmd_mute(message: types.Message):
-    await use_item(message, "mute")
+async def cmd_mute(message: types.Message, bot: Bot):
+    await use_item(message, "mute", bot)
 
-async def use_item(message: types.Message, item_id: str):
+async def use_item(message: types.Message, item_id: str, bot: Bot = None):
     if not message.reply_to_message:
         await message.answer(f"Ответьте на сообщение человека, чтобы применить {ITEMS[item_id]['name']}.")
         return
@@ -118,9 +118,9 @@ async def use_item(message: types.Message, item_id: str):
         sender_name = escape_html(message.from_user.full_name)
         action_name = ITEMS[item_id]['action']
 
-        if CREATOR_ID and CREATOR_ID != 0:
+        if CREATOR_ID and CREATOR_ID != 0 and bot:
             try:
-                await message.bot.send_message(
+                await bot.send_message(
                     chat_id=CREATOR_ID,
                     text=(
                         f"🚨 <b>Использование предмета из магазина!</b>\n\n"

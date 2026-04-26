@@ -1,5 +1,6 @@
 import asyncio
 import random
+import secrets
 from aiogram import Router, types
 from aiogram.filters import Command
 
@@ -8,6 +9,7 @@ from database.chances import get_game_chance
 from utils.escape import escape_html
 
 router = Router()
+secure_random = secrets.SystemRandom()
 
 EMOJIS = ["🍒", "🍋", "🍉", "🍇", "🔔", "💎", "7️⃣"]
 
@@ -56,7 +58,7 @@ async def cmd_slots(message: types.Message):
     # Animation
     for _ in range(3):
         await asyncio.sleep(0.5)
-        temp_slots = [random.choice(EMOJIS) for _ in range(3)]
+        temp_slots = [secure_random.choice(EMOJIS) for _ in range(3)]
         try:
             await msg.edit_text(f"{bonus_text}🎰 <b>Слоты крутятся...</b>\n\n[ {temp_slots[0]} | {temp_slots[1]} | {temp_slots[2]} ]")
         except:
@@ -69,45 +71,45 @@ async def cmd_slots(message: types.Message):
     is_forced_win = False
 
     if chance != -1:
-        if random.randint(1, 100) <= chance:
+        if secure_random.randint(1, 100) <= chance:
             is_forced_win = True
 
     # Final result
     if is_forced_win:
         # Принудительная победа (выдаем случайную выигрышную комбинацию)
         win_types = ["jackpot", "mega", "three", "pair_mega", "pair_7"]
-        chosen_win = random.choice(win_types)
+        chosen_win = secure_random.choice(win_types)
 
         if chosen_win == "jackpot":
             final_slots = ["7️⃣", "7️⃣", "7️⃣"]
         elif chosen_win == "mega":
-            sym = random.choice(["💎", "🔔"])
+            sym = secure_random.choice(["💎", "🔔"])
             final_slots = [sym, sym, sym]
         elif chosen_win == "three":
-            sym = random.choice(["🍒", "🍋", "🍉", "🍇"])
+            sym = secure_random.choice(["🍒", "🍋", "🍉", "🍇"])
             final_slots = [sym, sym, sym]
         elif chosen_win == "pair_mega":
-            sym = random.choice(["💎", "🔔"])
-            other = random.choice(["🍒", "🍋", "🍉", "🍇"])
+            sym = secure_random.choice(["💎", "🔔"])
+            other = secure_random.choice(["🍒", "🍋", "🍉", "🍇"])
             final_slots = [sym, sym, other]
-            random.shuffle(final_slots)
+            secure_random.shuffle(final_slots)
         else: # pair_7
-            other = random.choice(["🍒", "🍋", "🍉", "🍇"])
+            other = secure_random.choice(["🍒", "🍋", "🍉", "🍇"])
             final_slots = ["7️⃣", "7️⃣", other]
-            random.shuffle(final_slots)
+            secure_random.shuffle(final_slots)
     else:
         # Обычный честный рандом (но если шанс был установлен, и игрок не попал в % - он принудительно проигрывает)
         final_slots = [
-            random.choice(EMOJIS),
-            random.choice(EMOJIS),
-            random.choice(EMOJIS)
+            secure_random.choice(EMOJIS),
+            secure_random.choice(EMOJIS),
+            secure_random.choice(EMOJIS)
         ]
 
         # Если шанс был жестко задан (например 10%), а игрок в него не попал, мы должны гарантировать проигрыш,
         # чтобы реальный винрейт соответствовал установленному шансу.
         if chance != -1:
             while final_slots[0] == final_slots[1] or final_slots[1] == final_slots[2] or final_slots[0] == final_slots[2]:
-                final_slots = [random.choice(["🍒", "🍋"]), random.choice(["🍉", "🍇"]), random.choice(["💎", "🔔"])]
+                final_slots = [secure_random.choice(["🍒", "🍋"]), secure_random.choice(["🍉", "🍇"]), secure_random.choice(["💎", "🔔"])]
 
     profit = 0
     multiplier_text = ""

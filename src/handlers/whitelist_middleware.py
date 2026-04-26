@@ -25,19 +25,33 @@ class WhitelistMiddleware(BaseMiddleware):
             # Логируем попытку использования
             is_new = await log_unauthorized_chat(chat.id, chat.title or "Unknown")
 
-            # Если это первое использование в этом чате, отправляем уведомление админу
-            if is_new and CREATOR_ID and CREATOR_ID != 0:
-                try:
-                    await event.bot.send_message(
-                        chat_id=CREATOR_ID,
-                        text=(
-                            f"⚠️ <b>Бот добавлен или использован в неразрешенной группе!</b>\n\n"
-                            f"Название: <b>{chat.title}</b>\n"
-                            f"ID группы: <code>{chat.id}</code>\n\n"
-                            f"<i>Бот игнорирует команды в этом чате. Чтобы разрешить, введите:</i>\n"
-                            f"<code>/allow {chat.id}</code>"
+            # Отправляем уведомление админу, если это новая группа, или если кто-то настойчиво пишет
+            if CREATOR_ID and CREATOR_ID != 0 and is_new:
+                bot = data.get('bot')
+                if bot:
+                    try:
+                        await bot.send_message(
+                            chat_id=CREATOR_ID,
+                            text=(
+                                f"⚠️ <b>Попытка использования в неразрешенной группе!</b>\n\n"
+                                f"Название: <b>{chat.title}</b>\n"
+                                f"ID группы: <code>{chat.id}</code>\n\n"
+                                f"<i>Чтобы разрешить работу, введите:</i>\n"
+                                f"<code>/allow {chat.id}</code>"
+                            )
                         )
-                    )
+                    except Exception as e:
+                        print(f"Ошибка мидлвари: {e}")
+
+            # Оповещаем пользователей в чате (только на команды, чтобы не спамить на каждое сообщение, если у бота есть доступ ко всем сообщениям)
+            if isinstance(event, Message) and event.text and event.text.startswith('/'):
+                try:
+                    await event.answer("❌ <b>Ошибка:</b> Эта группа не находится в белом списке. Бот здесь не работает.\nПопросите создателя добавить группу через <code>/allow</code>.")
+                except Exception:
+                    pass
+            elif isinstance(event, CallbackQuery):
+                try:
+                    await event.answer("Бот заблокирован в этой группе.", show_alert=True)
                 except Exception:
                     pass
 

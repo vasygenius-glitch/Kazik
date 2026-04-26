@@ -238,6 +238,44 @@ async def cmd_disallow(message: types.Message):
     except ValueError:
         await message.answer("ID группы должен быть числом.")
 
+from aiogram import Bot
+from aiogram.filters.chat_member_updated import ChatMemberUpdatedFilter, IS_NOT_MEMBER, MEMBER, ADMINISTRATOR
+
+@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> MEMBER) | ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> ADMINISTRATOR))
+async def bot_added_to_chat(event: types.ChatMemberUpdated, bot: Bot):
+    chat_id = event.chat.id
+    chat_title = event.chat.title or "Unknown"
+
+    whitelist = await get_whitelist()
+
+    if chat_id not in whitelist:
+        from bot.config import CREATOR_ID
+
+        try:
+            # Сообщаем в саму группу, что мы ждем аппрува
+            await bot.send_message(
+                chat_id=chat_id,
+                text="Привет! Я добавлен в эту группу, но она не находится в моем белом списке. Я отправил запрос своему создателю. Жду разрешения на работу! 🛡"
+            )
+        except Exception as e:
+            print(f"Ошибка при приветствии в новой группе: {e}")
+
+        if CREATOR_ID and CREATOR_ID != 0:
+            try:
+                await bot.send_message(
+                    chat_id=CREATOR_ID,
+                    text=(
+                        f"⚠️ <b>Меня добавили в новую группу!</b>\n\n"
+                        f"Название: <b>{chat_title}</b>\n"
+                        f"ID группы: <code>{chat_id}</code>\n"
+                        f"Кто добавил: <b>{event.from_user.full_name}</b> (<code>{event.from_user.id}</code>)\n\n"
+                        f"<i>Группа не в белом списке. Чтобы разрешить работу, введите:</i>\n"
+                        f"<code>/allow {chat_id}</code>"
+                    )
+                )
+            except Exception as e:
+                print(f"Ошибка при отправке уведомления создателю: {e}")
+
 @router.message(Command("whitelist"))
 async def cmd_whitelist(message: types.Message):
     if not is_creator(message):
