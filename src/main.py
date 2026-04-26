@@ -55,7 +55,7 @@ async def main():
         finally:
             await bot_proxy.session.close()
     finally:
-        if not bot.session.closed:
+        if bot:
             await bot.session.close()
 if __name__ == "__main__":
     try:

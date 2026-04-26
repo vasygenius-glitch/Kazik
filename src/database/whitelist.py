@@ -17,10 +17,11 @@ async def get_whitelist():
         # Migrate old format (list) to new format (dict) if necessary
         allowed = data.get('allowed_chats', {})
         if isinstance(allowed, list):
-            _whitelist_cache = {int(k): "Unknown Group" for k in allowed}
-            await ref.set({'allowed_chats': _whitelist_cache}, merge=True)
+            _whitelist_cache = {int(k): "Unknown Group" for k in allowed if str(k).strip()}
+            save_data = {str(k): v for k, v in _whitelist_cache.items()}
+            await ref.set({'allowed_chats': save_data})
         else:
-            _whitelist_cache = {int(k): v for k, v in allowed.items()}
+            _whitelist_cache = {int(k): v for k, v in allowed.items() if str(k).strip()}
     else:
         _whitelist_cache = {}
     return _whitelist_cache
@@ -35,7 +36,7 @@ async def add_to_whitelist(chat_id: int, chat_title: str = "Unknown Group"):
         _whitelist_cache = whitelist
         # Firestore keys must be strings
         save_data = {str(k): v for k, v in whitelist.items()}
-        await ref.set({'allowed_chats': save_data}, merge=True)
+        await ref.set({'allowed_chats': save_data})
         return True
     return False
 
@@ -48,7 +49,7 @@ async def remove_from_whitelist(chat_id: int):
         del whitelist[chat_id]
         _whitelist_cache = whitelist
         save_data = {str(k): v for k, v in whitelist.items()}
-        await ref.set({'allowed_chats': save_data}, merge=True)
+        await ref.set({'allowed_chats': save_data})
         return True
     return False
 
