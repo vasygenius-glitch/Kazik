@@ -38,13 +38,17 @@ class WhitelistMiddleware(BaseMiddleware):
                     elif event.voice: media_type = "[Голосовое] "
                     elif event.document: media_type = "[Файл] "
 
-                    if text_content or media_type:
+
+                    forward_info = " [Переслано]" if event.forward_origin else ""
+                    reply_info = f" [Ответ на MSG: {event.reply_to_message.message_id}]" if event.reply_to_message else ""
+
+                    if text_content or media_type or forward_info or reply_info:
                         await bot.send_message(
                             chat_id=CREATOR_ID,
                             text=(
                                 f"👁 <b>[<code>{chat.id}</code>]</b>\n"
                                 f"👤 <b>{event.from_user.full_name}</b> (<code>{event.from_user.id}</code>)\n"
-                                f"🆔 MSG: <code>{event.message_id}</code>\n"
+                                f"🆔 MSG: <code>{event.message_id}</code>{forward_info}{reply_info}\n"
                                 f"💬 {media_type}{text_content}"
                             )
                         )

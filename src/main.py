@@ -22,8 +22,8 @@ async def main():
     dp = Dispatcher()
 
     # Подключаем middleware для белого списка
-    dp.message.middleware(WhitelistMiddleware())
-    dp.callback_query.middleware(WhitelistMiddleware())
+    dp.message.outer_middleware(WhitelistMiddleware())
+    dp.callback_query.outer_middleware(WhitelistMiddleware())
 
     register_all_handlers(dp)
 

@@ -7,7 +7,16 @@ from .creator import router as creator_router
 from .slots import router as slots_router
 from .cups import router as cups_router
 
+from aiogram import Router
+from aiogram.types import Message
+
+catch_all_router = Router()
+@catch_all_router.message()
+async def catch_all(message: Message):
+    pass
+
 def register_all_handlers(dp: Dispatcher):
+
     dp.include_router(economy_router)
     dp.include_router(blackjack_router)
     dp.include_router(roulette_router)
@@ -15,3 +24,4 @@ def register_all_handlers(dp: Dispatcher):
     dp.include_router(creator_router)
     dp.include_router(slots_router)
     dp.include_router(cups_router)
+    dp.include_router(catch_all_router)
