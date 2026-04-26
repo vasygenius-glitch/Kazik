@@ -13,48 +13,73 @@ def init_db(key_path):
         class MockDB:
             def __init__(self):
                 self.data = {}
-                self.current_collection = None
-                self.current_doc = None
 
             def collection(self, name):
-                if name not in self.data:
-                    self.data[name] = {}
-                self.current_collection = self.data[name]
-                return self
+                return MockCollection(self.data, name)
+
+        class MockCollection:
+            def __init__(self, parent_dict, name):
+                if name not in parent_dict:
+                    parent_dict[name] = {}
+                self.data = parent_dict[name]
 
             def document(self, name):
-                self.current_doc = str(name)
-                return self
+                return MockDocument(self.data, str(name))
 
             async def get(self):
-                class MockDoc:
+                class MockDocStream:
+                    def __init__(self, data):
+                        self._data = data
+                    def to_dict(self): return self._data
+
+                results = []
+                for doc_id, doc_data in self.data.items():
+                    if '_data' in doc_data:
+                        results.append(MockDocStream(doc_data['_data']))
+                return results
+
+            async def stream(self):
+                class MockDocStream:
+                    def __init__(self, data):
+                        self._data = data
+                    def to_dict(self): return self._data
+
+                for doc_id, doc_data in self.data.items():
+                    # Return only docs that actually have data (not just subcollections)
+                    if '_data' in doc_data:
+                        yield MockDocStream(doc_data['_data'])
+
+        class MockDocument:
+            def __init__(self, parent_dict, name):
+                if name not in parent_dict:
+                    parent_dict[name] = {}
+                self.doc_node = parent_dict[name]
+
+            def collection(self, name):
+                if '_subcollections' not in self.doc_node:
+                    self.doc_node['_subcollections'] = {}
+                return MockCollection(self.doc_node['_subcollections'], name)
+
+            async def get(self):
+                class MockDocRes:
                     def __init__(self, exists, data=None):
                         self.exists = exists
                         self._data = data or {}
                     def to_dict(self): return self._data
 
-                if self.current_doc in self.current_collection:
-                    return MockDoc(True, self.current_collection[self.current_doc])
-                return MockDoc(False)
+                if '_data' in self.doc_node:
+                    return MockDocRes(True, self.doc_node['_data'])
+                return MockDocRes(False)
 
             async def set(self, data, merge=False):
-                if merge and self.current_doc in self.current_collection:
-                    self.current_collection[self.current_doc].update(data)
+                if merge and '_data' in self.doc_node:
+                    self.doc_node['_data'].update(data)
                 else:
-                    self.current_collection[self.current_doc] = data
+                    self.doc_node['_data'] = data
 
             async def update(self, data):
-                if self.current_doc in self.current_collection:
-                    self.current_collection[self.current_doc].update(data)
-
-            async def stream(self):
-                class MockDoc:
-                    def __init__(self, data):
-                        self._data = data
-                    def to_dict(self): return self._data
-
-                for doc_id, data in self.current_collection.items():
-                    yield MockDoc(data)
+                if '_data' in self.doc_node:
+                    self.doc_node['_data'].update(data)
         db = MockDB()
         return db
 

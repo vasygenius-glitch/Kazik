@@ -1,11 +1,24 @@
+import asyncio
 import random
+import secrets
 from aiogram import Router, types
 from aiogram.filters import Command
 
 from database.user_manager import get_user_data, update_user_balance, check_and_give_bonus
+from database.chances import get_game_chance
 from utils.escape import escape_html
 
 router = Router()
+
+async def schedule_delete(msg):
+    await asyncio.sleep(40)
+    try:
+        if hasattr(msg, 'delete'):
+            await msg.delete()
+    except:
+        pass
+
+secure_random = secrets.SystemRandom()
 
 @router.message(Command("roulette"))
 async def cmd_roulette(message: types.Message):
@@ -29,6 +42,11 @@ async def cmd_roulette(message: types.Message):
         if bet < 100:
             await message.answer("Минимальная ставка — 100 сыроежек.")
             return
+        if bet > 50000000:
+            await message.answer("Максимальная ставка — 50 000 000 сыроежек.")
+            return
+            await message.answer("Минимальная ставка — 100 сыроежек.")
+            return
         if not (1 <= guess <= 36):
             await message.answer("Число должно быть от 1 до 36.")
             return
@@ -49,7 +67,24 @@ async def cmd_roulette(message: types.Message):
 
     await update_user_balance(chat_id, user_id, -bet)
 
-    result_number = random.randint(1, 36)
+    # Проверка шансов (Подкрутка)
+    chance = await get_game_chance('roulette')
+    if chance != -1:
+        is_forced_win = (secure_random.randint(1, 100) <= chance)
+        if is_forced_win:
+            # Даем победу (разброс от 0 до 4)
+            diff = secure_random.randint(0, 4)
+            result_number = guess + secure_random.choice([-diff, diff])
+            if result_number < 1: result_number = 1
+            if result_number > 36: result_number = 36
+        else:
+            # Принудительный проигрыш (разброс больше 4)
+            result_number = secure_random.randint(1, 36)
+            while abs(result_number - guess) <= 4:
+                result_number = secure_random.randint(1, 36)
+    else:
+        result_number = secure_random.randint(1, 36)
+
     diff = abs(result_number - guess)
 
     if diff == 0:
@@ -88,4 +123,5 @@ async def cmd_roulette(message: types.Message):
         f"Множитель: {multiplier_text}"
     )
 
-    await message.answer(text)
+    msg = await message.answer(text)
+    asyncio.create_task(schedule_delete(msg))

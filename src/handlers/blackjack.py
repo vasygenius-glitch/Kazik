@@ -1,3 +1,4 @@
+import asyncio
 import json
 from aiogram import Router, F, types
 from aiogram.filters import Command
@@ -8,6 +9,15 @@ from utils.cards import get_random_card, calculate_score, format_cards
 from utils.escape import escape_html
 
 router = Router()
+
+async def schedule_delete(msg):
+    await asyncio.sleep(40)
+    try:
+        if hasattr(msg, 'delete'):
+            await msg.delete()
+    except:
+        pass
+
 
 def get_bj_keyboard(game_id: str):
     builder = InlineKeyboardBuilder()
@@ -36,6 +46,11 @@ async def cmd_bj(message: types.Message):
     try:
         bet = int(args[1])
         if bet < 100:
+            await message.answer("Минимальная ставка — 100 сыроежек.")
+            return
+        if bet > 50000000:
+            await message.answer("Максимальная ставка — 50 000 000 сыроежек.")
+            return
             await message.answer("Минимальная ставка — 100 сыроежек.")
             return
     except ValueError:
@@ -79,7 +94,8 @@ async def cmd_bj(message: types.Message):
             f"Ваши карты: {format_cards(player_cards)} (21)\n"
             f"Карты дилера: {format_cards(dealer_cards)} ({dealer_score})"
         )
-        await message.answer(text)
+        msg = await message.answer(text)
+        asyncio.create_task(schedule_delete(msg))
         return
 
     active_games[game_id] = {
@@ -117,14 +133,13 @@ async def process_bj_hit(callback: types.CallbackQuery):
     if player_score > 21:
         game = active_games.pop(game_id, None)
         if not game:
+            await callback.answer()
             return
         text = (
-            f"<b>Перебор!</b> Вы проиграли {game['bet']} сыроежек.\n\n"
-            f"Игрок: {game['full_name']}\n"
-            f"Ваши карты: {format_cards(game['player_cards'])} ({player_score})\n"
-            f"Карты дилера: {format_cards(game['dealer_cards'])} ({calculate_score(game['dealer_cards'])})"
+            f"<b>БЛЭКДЖЕК: Игрок {game['full_name']} перебрал и проиграл {game['bet']} сыроежек.</b>"
         )
-        await callback.message.edit_text(text)
+        msg = await callback.message.edit_text(text)
+        asyncio.create_task(schedule_delete(msg))
     elif player_score == 21:
         game = active_games.pop(game_id, None)
         if game:
@@ -136,6 +151,8 @@ async def process_bj_hit(callback: types.CallbackQuery):
             f"Карты дилера: {format_cards(game['dealer_cards'])} и 🂠 (?)"
         )
         await callback.message.edit_text(text, reply_markup=get_bj_keyboard(game_id))
+
+    await callback.answer()
 
 @router.callback_query(F.data.startswith("bj_stand_"))
 async def process_bj_stand(callback: types.CallbackQuery):
@@ -152,6 +169,8 @@ async def process_bj_stand(callback: types.CallbackQuery):
     game = active_games.pop(game_id, None)
     if game:
         await finish_dealer_turn(callback, game)
+
+    await callback.answer()
 
 async def finish_dealer_turn(callback: types.CallbackQuery, game: dict):
     player_score = calculate_score(game['player_cards'])
@@ -177,19 +196,17 @@ async def finish_dealer_turn(callback: types.CallbackQuery, game: dict):
             profit += vip_profit_bonus
             vip_bonus_text = f" (👑 VIP бонус: +{vip_profit_bonus})"
 
-        result = f"<b>Вы выиграли!</b> (+{profit} сыроежек){vip_bonus_text}"
+        result = f"выиграл {profit} сыроежек{vip_bonus_text}"
         await update_user_balance(chat_id, user_id, bet + profit)
     elif player_score < dealer_score:
-        result = f"<b>Вы проиграли!</b> (-{bet} сыроежек)"
+        result = f"проиграл {bet} сыроежек"
     else:
-        result = "<b>Ничья!</b> (Возврат ставки)"
+        result = f"сыграл в ничью (возврат {bet} сыроежек)"
         await update_user_balance(chat_id, user_id, bet)
 
     text = (
-        f"{result}\n\n"
-        f"Игрок: {game['full_name']}\n"
-        f"Ваши карты: {format_cards(game['player_cards'])} ({player_score})\n"
-        f"Карты дилера: {format_cards(dealer_cards)} ({dealer_score})"
+        f"<b>БЛЭКДЖЕК: Игрок {game['full_name']} {result}!</b>"
     )
 
-    await callback.message.edit_text(text)
+    msg = await callback.message.edit_text(text)
+    asyncio.create_task(schedule_delete(msg))
