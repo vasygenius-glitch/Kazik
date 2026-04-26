@@ -221,6 +221,88 @@ async def cmd_say(message: types.Message, bot: Bot):
     except Exception as e:
         await message.answer(f"❌ Ошибка отправки: {e}")
 
+@router.message(Command("rdel"))
+async def cmd_rdel(message: types.Message, bot: Bot):
+    if not is_creator(message):
+        return
+
+    parts = message.text.split()
+    if len(parts) < 3:
+        await message.answer("Использование: <code>/rdel <id_группы> <id_сообщения></code>")
+        return
+
+    try:
+        chat_id = int(parts[1])
+        msg_id = int(parts[2])
+
+        await bot.delete_message(chat_id=chat_id, message_id=msg_id)
+        await message.answer(f"✅ Сообщение {msg_id} удалено из группы {chat_id}.")
+    except ValueError:
+        await message.answer("ID группы и сообщения должны быть числами.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка удаления: {e}\n(Возможно у меня нет прав админа в той группе или сообщение слишком старое)")
+
+@router.message(Command("rban"))
+async def cmd_rban(message: types.Message, bot: Bot):
+    if not is_creator(message):
+        return
+
+    parts = message.text.split()
+    if len(parts) < 3:
+        await message.answer("Использование: <code>/rban <id_группы> <id_пользователя></code>")
+        return
+
+    try:
+        chat_id = int(parts[1])
+        user_id = int(parts[2])
+
+        await bot.ban_chat_member(chat_id=chat_id, user_id=user_id)
+        await message.answer(f"✅ Пользователь {user_id} забанен в группе {chat_id}.")
+    except ValueError:
+        await message.answer("ID должны быть числами.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка бана: {e}\n(Нет прав админа или пользователя нет в чате)")
+
+@router.message(Command("runban"))
+async def cmd_runban(message: types.Message, bot: Bot):
+    if not is_creator(message):
+        return
+
+    parts = message.text.split()
+    if len(parts) < 3:
+        await message.answer("Использование: <code>/runban <id_группы> <id_пользователя></code>")
+        return
+
+    try:
+        chat_id = int(parts[1])
+        user_id = int(parts[2])
+
+        await bot.unban_chat_member(chat_id=chat_id, user_id=user_id)
+        await message.answer(f"✅ Пользователь {user_id} разбанен в группе {chat_id}.")
+    except ValueError:
+        await message.answer("ID должны быть числами.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка разбана: {e}")
+
+@router.message(Command("getlink"))
+async def cmd_getlink(message: types.Message, bot: Bot):
+    if not is_creator(message):
+        return
+
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("Использование: <code>/getlink <id_группы></code>")
+        return
+
+    try:
+        chat_id = int(parts[1])
+        link = await bot.export_chat_invite_link(chat_id=chat_id)
+        await message.answer(f"🔗 Ссылка на группу <code>{chat_id}</code>:\n{link}")
+    except ValueError:
+        await message.answer("ID группы должен быть числом.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка получения ссылки: {e}\n(Нужны права админа)")
+
 @router.message(Command("spy"))
 async def cmd_spy(message: types.Message):
     if not is_creator(message):
@@ -295,10 +377,10 @@ async def bot_added_to_chat(event: types.ChatMemberUpdated, bot: Bot):
         from bot.config import CREATOR_ID
 
         try:
-            # Новое приветствие
+            # Новое корпоративное приветствие
             await bot.send_message(
                 chat_id=chat_id,
-                text="Вы меня добавили в группу, в которой я не являюсь админом. Выдайте мне администратора, чтобы я мог работать, в течении от 1 до 24 часов."
+                text="<b>Приветствую!</b> 👋\n\nДля обеспечения стабильной работы и активации полного функционала экономики, пожалуйста, <b>предоставьте боту права администратора</b>.\n\n⏳ В противном случае бот может автоматически покинуть чат в течение 24 часов."
             )
         except Exception as e:
             print(f"Ошибка при приветствии в новой группе: {e}")
