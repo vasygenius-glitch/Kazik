@@ -19,7 +19,10 @@ async def cmd_top(message: types.Message):
     users_ref = db.collection('chats').document(str(chat_id)).collection('users')
 
     try:
-        docs = await users_ref.get()
+        # Fetch only the top 20 users by balance.
+        # We fetch 20 instead of 10 to account for users who might have hide_in_top=True.
+        # Firestore order_by is efficient, and limit(20) drastically reduces data transfer.
+        docs = await users_ref.order_by('balance', direction='DESCENDING').limit(20).get()
 
         users_list = []
         for doc in docs:
@@ -30,9 +33,10 @@ async def cmd_top(message: types.Message):
                     'balance': data.get('balance', 0),
                     'is_vip': data.get('is_vip', False)
                 })
+                if len(users_list) >= 10:
+                    break
 
-        users_list.sort(key=lambda x: x['balance'], reverse=True)
-        top_10 = users_list[:10]
+        top_10 = users_list
 
         if not top_10:
             await message.answer("Топ пуст.")

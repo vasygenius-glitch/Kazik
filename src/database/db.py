@@ -22,9 +22,19 @@ def init_db(key_path):
                 if name not in parent_dict:
                     parent_dict[name] = {}
                 self.data = parent_dict[name]
+                self._order_by = None
+                self._limit = None
 
             def document(self, name):
                 return MockDocument(self.data, str(name))
+
+            def order_by(self, field, direction='ASCENDING'):
+                self._order_by = (field, direction)
+                return self
+
+            def limit(self, count):
+                self._limit = count
+                return self
 
             async def get(self):
                 class MockDocStream:
@@ -36,18 +46,20 @@ def init_db(key_path):
                 for doc_id, doc_data in self.data.items():
                     if '_data' in doc_data:
                         results.append(MockDocStream(doc_data['_data']))
+
+                if self._order_by:
+                    field, direction = self._order_by
+                    results.sort(key=lambda x: x.to_dict().get(field, 0), reverse=(direction == 'DESCENDING'))
+
+                if self._limit:
+                    results = results[:self._limit]
+
                 return results
 
             async def stream(self):
-                class MockDocStream:
-                    def __init__(self, data):
-                        self._data = data
-                    def to_dict(self): return self._data
-
-                for doc_id, doc_data in self.data.items():
-                    # Return only docs that actually have data (not just subcollections)
-                    if '_data' in doc_data:
-                        yield MockDocStream(doc_data['_data'])
+                docs = await self.get()
+                for doc in docs:
+                    yield doc
 
         class MockDocument:
             def __init__(self, parent_dict, name):
