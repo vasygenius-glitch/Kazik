@@ -32,7 +32,6 @@ async def main():
 
     # Мы создаем AiohttpSession с явным прокси. Aiogram сам подхватит его.
     # Но мы должны передать аргументы для aiohttp.TCPConnector, чтобы отключить SSL.
-    from aiohttp import BasicAuth
 
     # Проверка на PythonAnywhere:
     if "PYTHONANYWHERE_SITE" in os.environ or "Goga22doga" in __file__:
