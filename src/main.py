@@ -37,15 +37,31 @@ async def main():
     # Проверка на PythonAnywhere:
     if "PYTHONANYWHERE_SITE" in os.environ or "Goga22doga" in __file__:
         print(f"Запуск на PythonAnywhere, настраиваю прокси: {proxy_url}")
+        os.environ["HTTP_PROXY"] = proxy_url
+        os.environ["HTTPS_PROXY"] = proxy_url
 
-        # Использование стандартного aiohttp.TCPConnector и отключение ssl
         import aiohttp
-        connector = aiohttp.TCPConnector(ssl=False)
-        session = AiohttpSession(proxy=proxy_url)
-        # Подменяем коннектор aiogram (с версии 3.x proxy можно передавать прямо в session.post,
-        # но мы явно запрещаем aiohttp_socks вмешиваться, если он установлен)
+        # В aiohttp_session есть возможность пробросить аргументы для ClientSession.
+        # proxy передавать в AiohttpSession НЕЛЬЗЯ, иначе он попытается загрузить aiohttp_socks.
+        # trust_env=True заставит aiohttp читать прокси из os.environ.
+        session = AiohttpSession()
         session._connector_type = aiohttp.TCPConnector
-        session._connector_kwargs = {"ssl": False}
+        session._connector_init = {"ssl": False}
+        session._should_reset_connector = True
+
+        # Переопределяем метод create_session, чтобы добавить trust_env=True
+        original_create_session = session.create_session
+        async def custom_create_session():
+            if session._should_reset_connector:
+                await session.close()
+            if session._session is None or session._session.closed:
+                session._session = aiohttp.ClientSession(
+                    connector=session._connector_type(**session._connector_init),
+                    trust_env=True
+                )
+                session._should_reset_connector = False
+            return session._session
+        session.create_session = custom_create_session
     else:
         session = AiohttpSession()
 
