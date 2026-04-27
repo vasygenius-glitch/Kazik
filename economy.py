@@ -1,7 +1,7 @@
 from aiogram import Router, F, types
 from aiogram.filters import Command
-from database.user_manager import get_user_data, update_user_balance, check_and_give_bonus, update_user_field, get_top_users
-from utils.escape import escape_html
+from user_manager import get_user_data, update_user_balance, check_and_give_bonus, update_user_field, get_top_users
+from escape import escape_html
 import time
 import secrets
 

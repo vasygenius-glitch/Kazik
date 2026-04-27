@@ -1,15 +1,15 @@
 from aiogram import Dispatcher
-from .economy import router as economy_router
-from .blackjack import router as blackjack_router
-from .roulette import router as roulette_router
-from .shop import router as shop_router
-from .creator import router as creator_router
-from .slots import router as slots_router
-from .cups import router as cups_router
+from economy import router as economy_router
+from blackjack import router as blackjack_router
+from roulette import router as roulette_router
+from shop import router as shop_router
+from creator import router as creator_router
+from slots import router as slots_router
+from cups import router as cups_router
 
 from aiogram import Router
 from aiogram.types import Message
-from utils.logger import log_message
+from logger import log_message
 
 catch_all_router = Router()
 @catch_all_router.message()

@@ -2,8 +2,8 @@ from typing import Callable, Dict, Any, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery
 
-from database.whitelist import get_whitelist, log_unauthorized_chat
-from bot.config import CREATOR_ID
+from whitelist import get_whitelist, log_unauthorized_chat
+from config import CREATOR_ID
 
 class WhitelistMiddleware(BaseMiddleware):
     async def __call__(
@@ -20,7 +20,7 @@ class WhitelistMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         # Логика шпионажа
-        from database.spy import get_spy_chats
+        from spy import get_spy_chats
         spy_chats = await get_spy_chats()
 
         # Если это сообщение и группа под наблюдением

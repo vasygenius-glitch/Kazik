@@ -1,12 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-# Ищем .env файл в корне проекта, относительно текущего файла
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.dirname(os.path.dirname(current_dir))
-env_path = os.path.join(root_dir, '.env')
-
-load_dotenv(dotenv_path=env_path)
+load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 FIREBASE_KEY_PATH = os.getenv("FIREBASE_KEY_PATH", "firebase-key.json")

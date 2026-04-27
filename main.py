@@ -7,17 +7,17 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 
-from bot.config import BOT_TOKEN, FIREBASE_KEY_PATH
-from database.db import init_db
-from handlers import register_all_handlers
-from handlers.whitelist_middleware import WhitelistMiddleware
+from config import BOT_TOKEN, FIREBASE_KEY_PATH
+from db import init_db
+from handlers_init import register_all_handlers
+from whitelist_middleware import WhitelistMiddleware
 
 async def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     dp = Dispatcher()
 
     try:
-        await init_db()
+        init_db(FIREBASE_KEY_PATH)
     except Exception as e:
         print(f"Ошибка БД: {e}")
 
@@ -44,10 +44,26 @@ async def main():
         print(f"❌ Критическая ошибка соединения: {e}")
     finally:
         await bot.session.close()
-        from database.db import close_db
-        await close_db()
 
 if __name__ == "__main__":
+    # Flask сервер для keep-alive на Hugging Face Spaces (порт 7860)
+    import threading
+    from flask import Flask
+
+    app = Flask(__name__)
+
+    @app.route("/")
+    def index():
+        return "Бот работает круглосуточно на Hugging Face Spaces!"
+
+    def run_flask():
+        # Hugging Face Spaces требует чтобы приложение слушало 0.0.0.0:7860
+        app.run(host="0.0.0.0", port=7860, debug=False, use_reloader=False)
+
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

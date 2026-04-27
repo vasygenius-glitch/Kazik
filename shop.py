@@ -2,8 +2,8 @@ from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.user_manager import get_user_data, update_user_balance, add_item_to_inventory, remove_item_from_inventory, update_user_field
-from utils.escape import escape_html
+from user_manager import get_user_data, update_user_balance, add_item_to_inventory, remove_item_from_inventory, update_user_field
+from escape import escape_html
 
 router = Router()
 
@@ -126,7 +126,7 @@ async def use_item(message: types.Message, item_id: str, bot: Bot = None):
     user_id = message.from_user.id
 
     if await remove_item_from_inventory(chat_id, user_id, item_id):
-        from bot.config import CREATOR_ID
+        from config import CREATOR_ID
 
         target_name = escape_html(message.reply_to_message.from_user.full_name)
         target_id = message.reply_to_message.from_user.id
