@@ -38,11 +38,14 @@ async def main():
     if "PYTHONANYWHERE_SITE" in os.environ or "Goga22doga" in __file__:
         print(f"Запуск на PythonAnywhere, настраиваю прокси: {proxy_url}")
 
-        # Monkey patch для aiogram, чтобы он НЕ использовал aiohttp_socks
-        import aiogram.client.session.aiohttp as aiohttp_session_module
-        aiohttp_session_module.aiohttp_socks = None
-
+        # Использование стандартного aiohttp.TCPConnector и отключение ssl
+        import aiohttp
+        connector = aiohttp.TCPConnector(ssl=False)
         session = AiohttpSession(proxy=proxy_url)
+        # Подменяем коннектор aiogram (с версии 3.x proxy можно передавать прямо в session.post,
+        # но мы явно запрещаем aiohttp_socks вмешиваться, если он установлен)
+        session._connector_type = aiohttp.TCPConnector
+        session._connector_kwargs = {"ssl": False}
     else:
         session = AiohttpSession()
 
