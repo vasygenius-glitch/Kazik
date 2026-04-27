@@ -6,6 +6,10 @@ from shop import router as shop_router
 from creator import router as creator_router
 from slots import router as slots_router
 from cups import router as cups_router
+from promo import router as promo_router
+from dice import router as dice_router
+from craps import router as craps_router
+from baccarat import router as baccarat_router
 
 from aiogram import Router
 from aiogram.types import Message
@@ -36,4 +40,8 @@ def register_all_handlers(dp: Dispatcher):
     dp.include_router(creator_router)
     dp.include_router(slots_router)
     dp.include_router(cups_router)
+    dp.include_router(promo_router)
+    dp.include_router(dice_router)
+    dp.include_router(craps_router)
+    dp.include_router(baccarat_router)
     dp.include_router(catch_all_router)
