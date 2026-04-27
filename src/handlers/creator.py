@@ -2,7 +2,7 @@ from aiogram import Router, types, Bot
 from aiogram.filters import Command
 
 from database.db import get_db
-from database.user_manager import get_user_data, update_user_balance, get_user_ref
+from database.user_manager import get_user_data, update_user_balance
 from bot.config import CREATOR_USERNAME
 from utils.escape import escape_html
 
@@ -12,8 +12,8 @@ def is_creator(message: types.Message):
     return message.from_user.username == CREATOR_USERNAME
 
 
-@router.message(Command("give"))
-async def cmd_give(message: types.Message):
+@router.message(Command("addmoney"))
+async def cmd_addmoney(message: types.Message):
     if not is_creator(message):
         return
 
@@ -38,8 +38,8 @@ async def cmd_give(message: types.Message):
     except ValueError:
         pass
 
-@router.message(Command("take"))
-async def cmd_take(message: types.Message):
+@router.message(Command("setmoney"))
+async def cmd_setmoney(message: types.Message):
     if not is_creator(message):
         return
 
@@ -58,9 +58,10 @@ async def cmd_take(message: types.Message):
         target_id = message.reply_to_message.from_user.id
         target_name = escape_html(message.reply_to_message.from_user.full_name)
 
+        from database.user_manager import update_user_field
         await get_user_data(chat_id, target_id, target_name)
-        await update_user_balance(chat_id, target_id, -amount)
-        await message.answer(f"Забрано {amount} сыроежек у пользователя {target_name}.")
+        await update_user_field(chat_id, target_id, 'balance', amount)
+        await message.answer(f"Баланс пользователя {target_name} установлен в {amount} сыроежек.")
     except ValueError:
         pass
 
@@ -76,9 +77,9 @@ async def cmd_ban(message: types.Message):
     chat_id = message.chat.id
     target_id = message.reply_to_message.from_user.id
     target_name = escape_html(message.reply_to_message.from_user.full_name)
+    from database.user_manager import update_user_field
     await get_user_data(chat_id, target_id, target_name)
-    ref = get_user_ref(chat_id, target_id)
-    await ref.update({'is_banned': True})
+    await update_user_field(chat_id, target_id, 'is_banned', True)
     await message.answer(f"Пользователь забанен в боте.")
 
 @router.message(Command("unban"))
@@ -93,9 +94,9 @@ async def cmd_unban(message: types.Message):
     chat_id = message.chat.id
     target_id = message.reply_to_message.from_user.id
     target_name = escape_html(message.reply_to_message.from_user.full_name)
+    from database.user_manager import update_user_field
     await get_user_data(chat_id, target_id, target_name)
-    ref = get_user_ref(chat_id, target_id)
-    await ref.update({'is_banned': False})
+    await update_user_field(chat_id, target_id, 'is_banned', False)
     await message.answer(f"Пользователь разбанен в боте.")
 
 @router.message(Command("hide"))
@@ -106,9 +107,9 @@ async def cmd_hide(message: types.Message):
     chat_id = message.chat.id
     user_id = message.from_user.id
     user_name = escape_html(message.from_user.full_name)
+    from database.user_manager import update_user_field
     await get_user_data(chat_id, user_id, user_name)
-    ref = get_user_ref(chat_id, user_id)
-    await ref.update({'hide_in_top': True})
+    await update_user_field(chat_id, user_id, 'hide_in_top', True)
     await message.answer("Вы скрыты из топа.")
 
 @router.message(Command("show"))
@@ -119,9 +120,9 @@ async def cmd_show(message: types.Message):
     chat_id = message.chat.id
     user_id = message.from_user.id
     user_name = escape_html(message.from_user.full_name)
+    from database.user_manager import update_user_field
     await get_user_data(chat_id, user_id, user_name)
-    ref = get_user_ref(chat_id, user_id)
-    await ref.update({'hide_in_top': False})
+    await update_user_field(chat_id, user_id, 'hide_in_top', False)
     await message.answer("Вы теперь отображаетесь в топе.")
 
 @router.message(Command("setvip"))
@@ -137,9 +138,9 @@ async def cmd_setvip(message: types.Message):
     target_id = message.reply_to_message.from_user.id
     target_name = escape_html(message.reply_to_message.from_user.full_name)
 
+    from database.user_manager import update_user_field
     await get_user_data(chat_id, target_id, target_name)
-    ref = get_user_ref(chat_id, target_id)
-    await ref.update({'is_vip': True})
+    await update_user_field(chat_id, target_id, 'is_vip', True)
     await message.answer(f"Пользователь {target_name} получил статус 👑 VIP!")
 
 @router.message(Command("delvip"))
@@ -155,9 +156,9 @@ async def cmd_delvip(message: types.Message):
     target_id = message.reply_to_message.from_user.id
     target_name = escape_html(message.reply_to_message.from_user.full_name)
 
+    from database.user_manager import update_user_field
     await get_user_data(chat_id, target_id, target_name)
-    ref = get_user_ref(chat_id, target_id)
-    await ref.update({'is_vip': False})
+    await update_user_field(chat_id, target_id, 'is_vip', False)
     await message.answer(f"Пользователь {target_name} лишен статуса VIP.")
 
 from database.whitelist import add_to_whitelist, remove_from_whitelist, get_whitelist

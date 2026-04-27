@@ -2,7 +2,7 @@ from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.user_manager import get_user_data, update_user_balance, add_item_to_inventory, remove_item_from_inventory, get_user_ref
+from database.user_manager import get_user_data, update_user_balance, add_item_to_inventory, remove_item_from_inventory, update_user_field
 from utils.escape import escape_html
 
 router = Router()
@@ -85,8 +85,7 @@ async def process_buy(callback: types.CallbackQuery):
             return
 
         await update_user_balance(chat_id, user_id, -item['price'])
-        ref = get_user_ref(chat_id, user_id)
-        await ref.update({'is_vip': True})
+        await update_user_field(chat_id, user_id, 'is_vip', True)
         await callback.answer("Вы успешно купили 👑 VIP Статус!", show_alert=True)
     else:
         await update_user_balance(chat_id, user_id, -item['price'])
