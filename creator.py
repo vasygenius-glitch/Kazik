@@ -9,7 +9,12 @@ from escape import escape_html
 router = Router()
 
 def is_creator(message: types.Message):
-    return message.from_user.username == CREATOR_USERNAME
+    from config import CREATOR_ID, CREATOR_USERNAME
+    if message.from_user.username == CREATOR_USERNAME:
+        return True
+    if CREATOR_ID and message.from_user.id == CREATOR_ID:
+        return True
+    return False
 
 
 @router.message(Command("addmoney"))

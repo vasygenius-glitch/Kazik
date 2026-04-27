@@ -37,13 +37,23 @@ async def main():
     print("Бот запускается на Hugging Face Spaces...")
 
     try:
-        await bot.get_me()
-        print("✅ Соединение с Telegram API установлено!")
-        await dp.start_polling(bot)
+        me = await bot.get_me()
+        print(f"✅ Соединение с Telegram API установлено! Бот: @{me.username}")
+        # Удаляем вебхуки, чтобы поллинг не конфликтовал (если они случайно были)
+        await bot.delete_webhook(drop_pending_updates=True)
+        print("✅ Начинаю слушать сообщения (polling)...")
     except Exception as e:
-        print(f"❌ Критическая ошибка соединения: {e}")
-    finally:
-        await bot.session.close()
+        print(f"❌ Ошибка проверки токена: {e}")
+
+    # Бесконечный цикл поллинга для защиты от падений сети на Hugging Face Spaces
+    while True:
+        try:
+            await dp.start_polling(bot, handle_signals=False)
+        except Exception as e:
+            print(f"❌ Ошибка сети/поллинга (переподключение через 5с): {e}")
+            await asyncio.sleep(5)
+
+    await bot.session.close()
 
 if __name__ == "__main__":
     # Flask сервер для keep-alive на Hugging Face Spaces (порт 7860)
