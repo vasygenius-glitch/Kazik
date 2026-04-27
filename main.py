@@ -21,8 +21,18 @@ async def main():
     except Exception as e:
         print(f"Ошибка БД: {e}")
 
-    # Стандартная сессия без прокси. Hugging Face Spaces разрешает любые запросы.
+    # Hugging Face Spaces workaround: Force IPv4 to prevent ClientConnectorError
+    import aiohttp
+    import socket
+    # Отключаем IPv6, заставляя TCPConnector использовать только IPv4.
+    connector = aiohttp.TCPConnector(family=socket.AF_INET, ssl=False)
+
+    # Создаем сессию с явным коннектором и таймаутом
     session = AiohttpSession()
+    session._connector_type = aiohttp.TCPConnector
+    session._connector_init = {"family": socket.AF_INET, "ssl": False}
+    session._should_reset_connector = True
+    session.timeout = 60 # Жесткий таймаут для Telegram API
 
     bot = Bot(
         token=BOT_TOKEN,
