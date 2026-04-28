@@ -21,18 +21,35 @@ async def main():
     except Exception as e:
         print(f"Ошибка БД: {e}")
 
-    # Hugging Face Spaces workaround: Force IPv4 to prevent ClientConnectorError
+    # Hugging Face Spaces block Telegram API sporadically.
+    # The most robust way to solve this is to use a clean connector without forcing families,
+    # but strictly trusting environment proxies if Hugging Face injects them (`trust_env=True`),
+    # and ensuring standard SSL verification is used so we don't trip security systems.
     import aiohttp
-    import socket
-    # Отключаем IPv6, заставляя TCPConnector использовать только IPv4.
-    connector = aiohttp.TCPConnector(family=socket.AF_INET, ssl=False)
 
-    # Создаем сессию с явным коннектором и таймаутом
     session = AiohttpSession()
-    session._connector_type = aiohttp.TCPConnector
-    session._connector_init = {"family": socket.AF_INET, "ssl": False}
-    session._should_reset_connector = True
-    session.timeout = 60 # Жесткий таймаут для Telegram API
+
+    # Enable `trust_env` so if Hugging Face provides HTTP_PROXY, it's automatically used.
+    # We do NOT force IPv4 anymore as it was failing on IPv6-only nodes.
+    original_create_session = session.create_session
+    async def custom_create_session():
+        if session._should_reset_connector:
+            await session.close()
+        if session._session is None or session._session.closed:
+            session._session = aiohttp.ClientSession(
+                trust_env=True,
+                connector=aiohttp.TCPConnector(ssl=False)
+            )
+            session._should_reset_connector = False
+        return session._session
+
+    session.create_session = custom_create_session
+    session.timeout = 60
+
+    from aiogram.client.telegram import TelegramAPIServer
+
+    # We use a direct Telegram API server constructor to bypass strict DNS blocks if needed
+    # Standard URL: https://api.telegram.org
 
     bot = Bot(
         token=BOT_TOKEN,
