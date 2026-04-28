@@ -5,9 +5,9 @@ import asyncio
 from aiogram import Router, types
 from aiogram.filters import Command
 
-from database.user_manager import get_user_data, update_user_balance, check_and_give_bonus
-from database.chances import get_game_chance
-from utils.escape import escape_html
+from user_manager import get_user_data, update_user_balance, check_and_give_bonus
+from chances import get_game_chance
+from escape import escape_html
 
 router = Router()
 

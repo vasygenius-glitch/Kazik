@@ -5,9 +5,9 @@ from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.user_manager import get_user_data, update_user_balance, check_and_give_bonus
-from database.chances import get_game_chance
-from utils.escape import escape_html
+from user_manager import get_user_data, update_user_balance, check_and_give_bonus
+from chances import get_game_chance
+from escape import escape_html
 
 router = Router()
 

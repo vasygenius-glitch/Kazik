@@ -1,6 +1,4 @@
-from database.db import get_db
-
-
+from db import get_db
 
 _whitelist_cache = None
 

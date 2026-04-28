@@ -1,55 +1,24 @@
 from aiogram import Router, types, Bot
 from aiogram.filters import Command
 
-from database.db import get_db
-from database.user_manager import get_user_data, update_user_balance, get_user_ref
-from bot.config import CREATOR_USERNAME
-from utils.escape import escape_html
+from db import get_db
+from user_manager import get_user_data, update_user_balance
+from config import CREATOR_USERNAME
+from escape import escape_html
 
 router = Router()
 
 def is_creator(message: types.Message):
-    return message.from_user.username == CREATOR_USERNAME
+    from config import CREATOR_ID, CREATOR_USERNAME
+    if message.from_user.username == CREATOR_USERNAME:
+        return True
+    if CREATOR_ID and message.from_user.id == CREATOR_ID:
+        return True
+    return False
 
-@router.message(Command("top"))
-async def cmd_top(message: types.Message):
-    chat_id = message.chat.id
-    db = get_db()
 
-    users_ref = db.collection('chats').document(str(chat_id)).collection('users')
-
-    try:
-        docs = await users_ref.get()
-
-        users_list = []
-        for doc in docs:
-            data = doc.to_dict()
-            if not data.get('hide_in_top', False):
-                users_list.append({
-                    'name': data.get('full_name', 'Unknown'),
-                    'balance': data.get('balance', 0),
-                    'is_vip': data.get('is_vip', False)
-                })
-
-        users_list.sort(key=lambda x: x['balance'], reverse=True)
-        top_10 = users_list[:10]
-
-        if not top_10:
-            await message.answer("Топ пуст.")
-            return
-
-        text = "🏆 ТОП-10 ИГРОКОВ ЧАТА 🏆\n\n"
-        for i, u in enumerate(top_10, 1):
-            vip_icon = " 👑" if u['is_vip'] else ""
-            text += f"{i}. {u['name']}{vip_icon} — {u['balance']} сыроежек\n"
-
-        await message.answer(text)
-    except Exception as e:
-        print(f"Ошибка при получении топа: {e}")
-        await message.answer("Топ временно недоступен.")
-
-@router.message(Command("give"))
-async def cmd_give(message: types.Message):
+@router.message(Command("addmoney"))
+async def cmd_addmoney(message: types.Message):
     if not is_creator(message):
         return
 
@@ -74,8 +43,8 @@ async def cmd_give(message: types.Message):
     except ValueError:
         pass
 
-@router.message(Command("take"))
-async def cmd_take(message: types.Message):
+@router.message(Command("setmoney"))
+async def cmd_setmoney(message: types.Message):
     if not is_creator(message):
         return
 
@@ -94,9 +63,10 @@ async def cmd_take(message: types.Message):
         target_id = message.reply_to_message.from_user.id
         target_name = escape_html(message.reply_to_message.from_user.full_name)
 
+        from user_manager import update_user_field
         await get_user_data(chat_id, target_id, target_name)
-        await update_user_balance(chat_id, target_id, -amount)
-        await message.answer(f"Забрано {amount} сыроежек у пользователя {target_name}.")
+        await update_user_field(chat_id, target_id, 'balance', amount)
+        await message.answer(f"Баланс пользователя {target_name} установлен в {amount} сыроежек.")
     except ValueError:
         pass
 
@@ -112,9 +82,9 @@ async def cmd_ban(message: types.Message):
     chat_id = message.chat.id
     target_id = message.reply_to_message.from_user.id
     target_name = escape_html(message.reply_to_message.from_user.full_name)
+    from user_manager import update_user_field
     await get_user_data(chat_id, target_id, target_name)
-    ref = get_user_ref(chat_id, target_id)
-    await ref.update({'is_banned': True})
+    await update_user_field(chat_id, target_id, 'is_banned', True)
     await message.answer(f"Пользователь забанен в боте.")
 
 @router.message(Command("unban"))
@@ -129,9 +99,9 @@ async def cmd_unban(message: types.Message):
     chat_id = message.chat.id
     target_id = message.reply_to_message.from_user.id
     target_name = escape_html(message.reply_to_message.from_user.full_name)
+    from user_manager import update_user_field
     await get_user_data(chat_id, target_id, target_name)
-    ref = get_user_ref(chat_id, target_id)
-    await ref.update({'is_banned': False})
+    await update_user_field(chat_id, target_id, 'is_banned', False)
     await message.answer(f"Пользователь разбанен в боте.")
 
 @router.message(Command("hide"))
@@ -142,9 +112,9 @@ async def cmd_hide(message: types.Message):
     chat_id = message.chat.id
     user_id = message.from_user.id
     user_name = escape_html(message.from_user.full_name)
+    from user_manager import update_user_field
     await get_user_data(chat_id, user_id, user_name)
-    ref = get_user_ref(chat_id, user_id)
-    await ref.update({'hide_in_top': True})
+    await update_user_field(chat_id, user_id, 'hide_in_top', True)
     await message.answer("Вы скрыты из топа.")
 
 @router.message(Command("show"))
@@ -155,9 +125,9 @@ async def cmd_show(message: types.Message):
     chat_id = message.chat.id
     user_id = message.from_user.id
     user_name = escape_html(message.from_user.full_name)
+    from user_manager import update_user_field
     await get_user_data(chat_id, user_id, user_name)
-    ref = get_user_ref(chat_id, user_id)
-    await ref.update({'hide_in_top': False})
+    await update_user_field(chat_id, user_id, 'hide_in_top', False)
     await message.answer("Вы теперь отображаетесь в топе.")
 
 @router.message(Command("setvip"))
@@ -173,9 +143,9 @@ async def cmd_setvip(message: types.Message):
     target_id = message.reply_to_message.from_user.id
     target_name = escape_html(message.reply_to_message.from_user.full_name)
 
+    from user_manager import update_user_field
     await get_user_data(chat_id, target_id, target_name)
-    ref = get_user_ref(chat_id, target_id)
-    await ref.update({'is_vip': True})
+    await update_user_field(chat_id, target_id, 'is_vip', True)
     await message.answer(f"Пользователь {target_name} получил статус 👑 VIP!")
 
 @router.message(Command("delvip"))
@@ -191,14 +161,14 @@ async def cmd_delvip(message: types.Message):
     target_id = message.reply_to_message.from_user.id
     target_name = escape_html(message.reply_to_message.from_user.full_name)
 
+    from user_manager import update_user_field
     await get_user_data(chat_id, target_id, target_name)
-    ref = get_user_ref(chat_id, target_id)
-    await ref.update({'is_vip': False})
+    await update_user_field(chat_id, target_id, 'is_vip', False)
     await message.answer(f"Пользователь {target_name} лишен статуса VIP.")
 
-from database.whitelist import add_to_whitelist, remove_from_whitelist, get_whitelist
+from whitelist import add_to_whitelist, remove_from_whitelist, get_whitelist
 
-from database.spy import toggle_spy
+from spy import toggle_spy
 
 @router.message(Command("say"))
 async def cmd_say(message: types.Message, bot: Bot):
@@ -383,7 +353,7 @@ async def bot_added_to_chat(event: types.ChatMemberUpdated, bot: Bot):
     whitelist = await get_whitelist()
 
     if chat_id not in whitelist:
-        from bot.config import CREATOR_ID
+        from config import CREATOR_ID
 
         try:
             # Новое корпоративное приветствие
@@ -427,7 +397,7 @@ async def cmd_whitelist(message: types.Message):
 
     await message.answer(text)
 
-from database.chances import set_game_chance, get_game_chance
+from chances import set_game_chance, get_game_chance
 
 @router.message(Command("setchance"))
 async def cmd_setchance(message: types.Message):
@@ -511,7 +481,7 @@ async def cmd_rleave(message: types.Message, bot: Bot):
     try:
         chat_id = int(parts[1])
         await bot.leave_chat(chat_id)
-        from database.whitelist import remove_from_whitelist
+        from whitelist import remove_from_whitelist
         await remove_from_whitelist(chat_id)
         await message.answer(f"✅ Бот успешно покинул группу {chat_id} и удален из белого списка.")
     except Exception as e:
@@ -572,7 +542,7 @@ async def cmd_runpin(message: types.Message, bot: Bot):
         await message.answer(f"❌ Ошибка: {e}")
 
 from aiogram.types import FSInputFile
-from utils.logger import get_log_file
+from logger import get_log_file
 
 @router.message(Command("gethistory"))
 async def cmd_gethistory(message: types.Message):

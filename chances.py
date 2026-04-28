@@ -1,4 +1,4 @@
-from database.db import get_db
+from db import get_db
 
 async def get_game_chance(game_name: str) -> int:
     db = get_db()

@@ -1,4 +1,4 @@
-from database.db import get_db
+from db import get_db
 
 _spy_cache = None
 

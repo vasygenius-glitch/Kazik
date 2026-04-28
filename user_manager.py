@@ -1,4 +1,4 @@
-from database.db import get_db
+from db import get_db
 import time
 
 def get_user_ref(chat_id, user_id):
@@ -21,6 +21,8 @@ async def get_user_data(chat_id, user_id, full_name=None):
         default_data = {
             'balance': 500,
             'last_bonus_time': 0,
+            'last_work_time': 0,
+            'last_crime_time': 0,
             'inventory': {},
             'is_banned': False,
             'hide_in_top': False,
@@ -40,6 +42,11 @@ async def update_user_balance(chat_id, user_id, amount):
         return new_balance
     return None
 
+async def update_user_field(chat_id, user_id, field, value):
+    ref = get_user_ref(chat_id, user_id)
+    doc = await ref.get()
+    if doc.exists:
+        await ref.update({field: value})
 
 BUSINESSES = {
     "shawarma": 10000,
@@ -97,3 +104,22 @@ async def remove_item_from_inventory(chat_id, user_id, item_name):
         await ref.update({'inventory': inv})
         return True
     return False
+
+async def get_top_users(chat_id, limit=10):
+    db = get_db()
+    users_ref = db.collection('chats').document(str(chat_id)).collection('users')
+    docs = await users_ref.get()
+
+    users = []
+    for doc in docs:
+        data = doc.to_dict()
+        if not data.get('hide_in_top', False) and not data.get('is_banned', False):
+            users.append({
+                'user_id': doc.id,
+                'full_name': data.get('full_name', 'Unknown'),
+                'balance': data.get('balance', 0),
+                'is_vip': data.get('is_vip', False)
+            })
+
+    users.sort(key=lambda x: x['balance'], reverse=True)
+    return users[:limit]
