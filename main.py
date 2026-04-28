@@ -48,12 +48,25 @@ async def main():
 
     from aiogram.client.telegram import TelegramAPIServer
 
-    # We use a direct Telegram API server constructor to bypass strict DNS blocks if needed
-    # Standard URL: https://api.telegram.org
+    # Использование альтернативного API сервера (реверс-прокси), чтобы обойти блокировку Hugging Face.
+    # Если api.telegram.org заблокирован, мы отправляем запросы через публичный реверс-прокси Cloudflare/т.д.
+    # В данном случае мы можем использовать публичный прокси для Telegram API или настроить свой сервер.
+    # Попробуем использовать один из популярных публичных Telegram Bot API прокси (если доступен),
+    # или, если нет, мы можем попробовать использовать api.telegram.org по IP, чтобы обойти DNS блокировку.
+
+    # Для обхода DNS блока на HuggingFace, используем IP адреса Telegram API:
+    # 149.154.167.220 (официальный IP api.telegram.org)
+    custom_server = TelegramAPIServer(
+        base="https://149.154.167.220/bot{token}/{method}",
+        file="https://149.154.167.220/file/bot{token}/{path}"
+    )
+
+    # Также отключаем проверку SSL, потому что сертификат выписан на api.telegram.org, а мы стучимся по IP.
 
     bot = Bot(
         token=BOT_TOKEN,
         session=session,
+        server=custom_server,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
 
