@@ -48,25 +48,15 @@ async def main():
 
     from aiogram.client.telegram import TelegramAPIServer
 
-    # Использование альтернативного API сервера (реверс-прокси), чтобы обойти блокировку Hugging Face.
-    # Если api.telegram.org заблокирован, мы отправляем запросы через публичный реверс-прокси Cloudflare/т.д.
-    # В данном случае мы можем использовать публичный прокси для Telegram API или настроить свой сервер.
-    # Попробуем использовать один из популярных публичных Telegram Bot API прокси (если доступен),
-    # или, если нет, мы можем попробовать использовать api.telegram.org по IP, чтобы обойти DNS блокировку.
+    # Используем приватный Cloudflare Worker для обхода жесткой блокировки api.telegram.org на Hugging Face Spaces
+    custom_server = TelegramAPIServer.from_base("https://super-cloud-9af3.ruzkovmisa.workers.dev/")
 
-    # Для обхода жесткой блокировки api.telegram.org на Hugging Face Spaces мы используем публичный реверс-прокси Cloudflare
-    # Это позволяет запросам проходить через инфраструктуру Cloudflare (которую Hugging Face разрешает), а не напрямую к серверам TG.
-    proxy_url = "https://tg.tg.workers.dev" # Известный публичный реверс прокси для TG API
-
-    custom_server = TelegramAPIServer(
-        base=f"{proxy_url}/bot{{token}}/{{method}}",
-        file=f"{proxy_url}/file/bot{{token}}/{{path}}"
-    )
+    # Назначаем этот API-сервер внутрь сессии (так требует aiogram 3.x для корректной маршрутизации)
+    session.api = custom_server
 
     bot = Bot(
         token=BOT_TOKEN,
         session=session,
-        server=custom_server,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
 
