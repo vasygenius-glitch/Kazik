@@ -17,7 +17,7 @@ def is_creator(message: types.Message):
     return False
 
 
-@router.message(Command("addmoney"))
+@router.message(Command("addmoney", "give"))
 async def cmd_addmoney(message: types.Message):
     if not is_creator(message):
         return
@@ -342,10 +342,10 @@ async def cmd_disallow(message: types.Message):
     except ValueError:
         await message.answer("ID группы должен быть числом.")
 
-from aiogram.filters.chat_member_updated import ChatMemberUpdatedFilter, IS_NOT_MEMBER, MEMBER, ADMINISTRATOR
+from aiogram.filters.chat_member_updated import ChatMemberUpdatedFilter, IS_NOT_MEMBER, MEMBER, ADMINISTRATOR, KICKED, LEFT
 
-@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> MEMBER))
-@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> ADMINISTRATOR))
+# Только когда бота реально добавляют в группу (с полного нуля или после кика), а не просто дают/забирают права админа
+@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=(LEFT | KICKED) >> (MEMBER | ADMINISTRATOR)))
 async def bot_added_to_chat(event: types.ChatMemberUpdated, bot: Bot):
     chat_id = event.chat.id
     chat_title = event.chat.title or "Unknown"
@@ -354,16 +354,6 @@ async def bot_added_to_chat(event: types.ChatMemberUpdated, bot: Bot):
 
     if chat_id not in whitelist:
         from config import CREATOR_ID
-
-        try:
-            # Новое корпоративное приветствие
-            await bot.send_message(
-                chat_id=chat_id,
-                text="<b>Приветствую!</b> 👋\n\nДля обеспечения стабильной работы и активации полного функционала экономики, пожалуйста, <b>предоставьте боту права администратора</b>.\n\n⏳ В противном случае бот может автоматически покинуть чат в течение 24 часов."
-            )
-        except Exception as e:
-            print(f"Ошибка при приветствии в новой группе: {e}")
-
         if CREATOR_ID and CREATOR_ID != 0:
             try:
                 await bot.send_message(

@@ -62,6 +62,10 @@ async def cmd_cups(message: types.Message):
     data = await get_user_data(chat_id, user_id, full_name)
     balance = data.get('balance', 0)
 
+    if balance < bet:
+        await message.answer(f"{bonus_text}Недостаточно сыроежек на балансе!")
+        return
+
     if balance - bet < -5000:
         await message.answer(f"{bonus_text}Ваш кредитный лимит (-5000) исчерпан. Пополните баланс.")
         return
