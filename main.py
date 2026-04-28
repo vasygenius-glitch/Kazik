@@ -54,14 +54,14 @@ async def main():
     # Попробуем использовать один из популярных публичных Telegram Bot API прокси (если доступен),
     # или, если нет, мы можем попробовать использовать api.telegram.org по IP, чтобы обойти DNS блокировку.
 
-    # Для обхода DNS блока на HuggingFace, используем IP адреса Telegram API:
-    # 149.154.167.220 (официальный IP api.telegram.org)
-    custom_server = TelegramAPIServer(
-        base="https://149.154.167.220/bot{token}/{method}",
-        file="https://149.154.167.220/file/bot{token}/{path}"
-    )
+    # Для обхода жесткой блокировки api.telegram.org на Hugging Face Spaces мы используем публичный реверс-прокси Cloudflare
+    # Это позволяет запросам проходить через инфраструктуру Cloudflare (которую Hugging Face разрешает), а не напрямую к серверам TG.
+    proxy_url = "https://tg.tg.workers.dev" # Известный публичный реверс прокси для TG API
 
-    # Также отключаем проверку SSL, потому что сертификат выписан на api.telegram.org, а мы стучимся по IP.
+    custom_server = TelegramAPIServer(
+        base=f"{proxy_url}/bot{{token}}/{{method}}",
+        file=f"{proxy_url}/file/bot{{token}}/{{path}}"
+    )
 
     bot = Bot(
         token=BOT_TOKEN,
