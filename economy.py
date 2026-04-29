@@ -1,5 +1,7 @@
 from aiogram import Router, F, types
 from aiogram.filters import Command
+import secrets
+from economy_utils import get_global_tax
 from user_manager import get_user_data, update_user_balance, check_and_give_bonus, update_user_field, get_top_users
 from escape import escape_html
 import time
@@ -30,16 +32,26 @@ async def cmd_help(message: types.Message):
         "💰 <b>Экономика:</b>\n"
         "<code>/balance</code> — Проверить свой баланс и статус.\n"
         "<code>/top</code> — Топ-10 богачей чата.\n"
-        "<code>/shop</code> — Открыть магазин бизнесов.\n"
-        "<code>/bonus</code> — Ежедневный бонус и пассивный доход.\n"
+        "<code>/shop</code> — Магазин бизнесов и привилегий.\n"
+        "<code>/upgrade &lt;id&gt;</code> — Прокачать бизнес (до 10 ур).\n"
+        "<code>/skills</code> — Меню прокачки навыков.\n"
+        "<code>/bonus</code> — Сбор дохода (раз в час) и ежедневный бонус.\n"
         "<code>/work</code> — Легальный заработок.\n"
         "<code>/crime</code> — Рискованный заработок (ограбление).\n"
         "<code>/pay &lt;сумма&gt; &lt;reply&gt;</code> — Перевод денег.\n\n"
         "🎰 <b>Игры:</b>\n"
-        "<code>/slots &lt;ставка&gt;</code> — Игровые автоматы.\n"
-        "<code>/blackjack &lt;ставка&gt;</code> — Игра в 21.\n"
-        "<code>/roulette &lt;ставка&gt;</code> — Рулетка.\n"
+        "<code>/bj &lt;ставка&gt;</code> — Блэкджек.\n"
+        "<code>/slots &lt;ставка&gt;</code> — Слоты.\n"
+        "<code>/roulette &lt;ставка&gt; &lt;число/цвет&gt;</code> — Рулетка.\n"
         "<code>/cups &lt;ставка&gt;</code> — Наперстки.\n"
+        "<code>/dice &lt;ставка&gt;</code> — Кости.\n"
+        "<code>/craps &lt;ставка&gt;</code> — Крэпс.\n"
+        "<code>/baccarat &lt;ставка&gt;</code> — Баккара.\n\n"
+        "💡 <b>Механики:</b>\n"
+        "— Вы можете уходить в минус (до -5000 сыроежек).\n"
+        "— При долгах к вам могут наведаться коллекторы!\n"
+        "— Лимит бизнесов: 2 (для VIP - 4).\n"
+        "— При переводах взимается глобальный налог, который идет на развитие экономики."
     )
     await message.answer(text)
 
@@ -97,11 +109,12 @@ async def cmd_pay(message: types.Message):
         await message.answer("Сумма должна быть положительным числом.")
         return
 
-    total_cost = int(amount * 1.1)
+    tax_percent = await get_global_tax()
+    total_cost = int(amount * (1 + tax_percent / 100))
     commission = total_cost - amount
 
     if sender_data.get('balance', 0) < total_cost:
-        await message.answer(f"Недостаточно средств. Для перевода {amount} нужно {total_cost} сыроежек (комиссия 10%).")
+        await message.answer(f"Недостаточно средств. Для перевода {amount} нужно {total_cost} сыроежек (налог {tax_percent}%).")
         return
 
     try:
@@ -124,10 +137,20 @@ async def cmd_pay(message: types.Message):
         await get_user_data(chat_id, admin_id)
         await update_user_balance(chat_id, admin_id, commission_per_admin)
 
+    phrases = [
+        f"Налоговая откусила кусок в {commission} сыроежек.",
+        f"Гоблины-сборщики забрали {commission} сыроежек в казну.",
+        f"Крыша требует свою долю. Удержано {commission} сыроежек.",
+        f"Банкирский дом забирает свои скромные {commission} сыроежек за услуги.",
+        f"Местные рэкетиры взыскали налог: {commission} сыроежек.",
+        f"Комиссия в {commission} сыроежек ушла на развитие экономики сервера."
+    ]
+    phrase = secrets.choice(phrases) if commission > 0 else "Налог отменен! Все средства дошли без потерь."
+
     await message.answer(
-        f"💸 Успешный перевод!\n"
+        f"💸 <b>Успешный перевод!</b>\n\n"
         f"Отправлено: {amount} сыроежек пользователю {target_name}.\n"
-        f"Комиссия: {commission} сыроежек (распределена между {len(human_admins)} администраторами)."
+        f"<i>{phrase}</i> (Налог {tax_percent}%, распределен между админами)."
     )
 
 @router.message(Command("bonus"))
@@ -136,11 +159,20 @@ async def cmd_bonus(message: types.Message):
     user_id = message.from_user.id
     full_name = escape_html(message.from_user.full_name)
 
-    success, amount = await check_and_give_bonus(chat_id, user_id, full_name)
+    success, receipt = await check_and_give_bonus(chat_id, user_id, full_name)
     if success:
-        await message.answer(f"🎁 Вы успешно получили бонус и пассивный доход в размере <b>{amount}</b> сыроежек!")
+        text = f"🧾 <b>Квитанция о доходах</b>\n\n"
+        if receipt.get('base', 0) > 0:
+            text += f"🎁 Ежедневный бонус: <b>{receipt['base']}</b>\n"
+        text += f"🏢 Доход с бизнесов: <b>{receipt['business']}</b>\n"
+        text += f"🚗 Доход с машин: <b>{receipt['car']}</b>\n"
+        text += f"➖ Налог ({receipt['tax_percent']}%): <b>-{receipt['tax_amount']}</b>\n"
+        text += f"-----------------------\n"
+        text += f"💰 Итого на руки: <b>{receipt['total']}</b> сыроежек"
+
+        await message.answer(text)
     else:
-        await message.answer("❌ Вы уже получали бонус за последние 24 часа. Приходите позже!")
+        await message.answer("❌ Вы уже собирали доход недавно. Попробуйте через час!")
 
 @router.message(Command("work"))
 async def cmd_work(message: types.Message):
@@ -165,6 +197,16 @@ async def cmd_work(message: types.Message):
     earnings = rand.randint(50, 250)
 
     await update_user_field(chat_id, user_id, 'last_work_time', current_time)
+
+    balance = data.get('balance', 0)
+    if balance < 0 and rand.randint(1, 100) <= 30: # 30% chance for collectors if in debt
+        penalty = rand.randint(50, 100)
+        await update_user_balance(chat_id, user_id, -penalty)
+        return await message.answer(
+            f"💼 Вы честно трудились и заработали {earnings} сыроежек, но тут появились <b>КОЛЛЕКТОРЫ</b>! 🦹‍♂️\n\n"
+            f"Они отобрали всю вашу зарплату и выбили еще {penalty} сыроежек сверху в счет вашего долга."
+        )
+
     await update_user_balance(chat_id, user_id, earnings)
 
     jobs = [
@@ -201,17 +243,26 @@ async def cmd_crime(message: types.Message):
     await update_user_field(chat_id, user_id, 'last_crime_time', current_time)
 
     rand = secrets.SystemRandom()
-    if rand.random() < 0.4: # 40% chance of success
+    stealth_level = data.get('skills', {}).get('stealth', 0)
+    if rand.random() < (0.4 + stealth_level * 0.05): # 40% + 5% per level
         earnings = rand.randint(200, 800)
+
+        balance = data.get('balance', 0)
+        if balance < 0 and rand.randint(1, 100) <= 40: # 40% chance for collectors on successful crime if in debt
+            penalty = rand.randint(100, 200)
+            await update_user_balance(chat_id, user_id, -penalty)
+            return await message.answer(
+                f"🥷 Вы успешно провернули дело и украли {earnings} сыроежек...\n"
+                f"Но за углом вас поджидали <b>КОЛЛЕКТОРЫ</b>! 🦹‍♂️\n"
+                f"Они забрали всю добычу и выпотрошили карманы еще на {penalty} сыроежек в счет долга."
+            )
+
         await update_user_balance(chat_id, user_id, earnings)
         crimes = ["ограбили магазин", "угнали велосипед", "украли кошелек", "взломали банкомат"]
         crime = rand.choice(crimes)
         await message.answer(f"🥷 Вы успешно <b>{crime}</b> и получили <b>{earnings}</b> сыроежек!")
     else:
         fine = rand.randint(100, 300)
-        balance = data.get('balance', 0)
-        if balance < fine:
-            fine = balance
         await update_user_balance(chat_id, user_id, -fine)
         await message.answer(f"🚔 Вас поймала полиция! Вы заплатили штраф в размере <b>{fine}</b> сыроежек.")
 

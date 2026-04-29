@@ -8,9 +8,9 @@ from escape import escape_html
 router = Router()
 
 ITEMS = {
-    "lada": {"name": "🚗 Lada Priora", "price": 250000, "action": "none"},
-    "bmw": {"name": "🚕 BMW M5", "price": 1500000, "action": "none"},
-    "bugatti": {"name": "🏎 Bugatti Chiron", "price": 10000000, "action": "none"},
+    "lada": {"name": "🚗 Lada Priora", "price": 250000, "action": "car", "income": 1500},
+    "bmw": {"name": "🚕 BMW M5", "price": 1500000, "action": "car", "income": 10000},
+    "bugatti": {"name": "🏎 Bugatti Chiron", "price": 10000000, "action": "car", "income": 100000},
     "vip": {"name": "💎 Статус VIP", "price": 5000000, "action": "vip"},
     "shawarma": {"name": "🏪 Ларёк с шаурмой", "price": 100000, "action": "business", "income": 10000},
     "carwash": {"name": "🚿 Автомойка", "price": 500000, "action": "business", "income": 60000},
@@ -68,10 +68,18 @@ async def process_buy(callback: types.CallbackQuery):
     balance = data.get('balance', 0)
 
 
-    if item.get('action') == "business" or item.get('action') == "none":
+    if item.get('action') == "business":
+        is_vip = data.get('is_vip', False)
+        limit = 4 if is_vip else 2
         inventory = data.get('inventory', {})
-        if inventory.get(item_id, 0) >= 2:
-            await callback.answer(f"У вас уже есть максимальное количество (2 шт.) этого предмета!", show_alert=True)
+        business_count = sum(1 for key in inventory if ITEMS.get(key, {}).get('action') == 'business')
+
+        if item_id in inventory:
+            await callback.answer("У вас уже есть этот бизнес! Используйте /upgrade для повышения уровня.", show_alert=True)
+            return
+
+        if business_count >= limit:
+            await callback.answer("У тебя не хватает средств и влияния обеспечивать больше бизнесов! Лимит достигнут.", show_alert=True)
             return
 
     if balance < item['price']:
@@ -152,3 +160,43 @@ async def use_item(message: types.Message, item_id: str, bot: Bot = None):
         await message.answer("✅ Запрос на применение предмета отправлен администратору бота.")
     else:
         await message.answer(f"У вас нет предмета '{ITEMS[item_id]['name']}'. Купите его в /shop")
+
+@router.message(Command("upgrade"))
+async def cmd_upgrade(message: types.Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    full_name = escape_html(message.from_user.full_name)
+
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("Укажите ID бизнеса из магазина: <code>/upgrade shawarma</code>")
+        return
+
+    item_id = args[1]
+    if item_id not in ITEMS or ITEMS[item_id]['action'] != 'business':
+        await message.answer("Это не бизнес. Посмотрите ID бизнесов в магазине (/shop).")
+        return
+
+    data = await get_user_data(chat_id, user_id, full_name)
+    inventory = data.get('inventory', {})
+
+    if item_id not in inventory:
+        await message.answer("У вас нет этого бизнеса.")
+        return
+
+    current_level = inventory[item_id]
+    if current_level >= 10:
+        await message.answer("Этот бизнес уже максимального уровня (10)!")
+        return
+
+    upgrade_price = ITEMS[item_id]['price'] * current_level // 2
+
+    balance = data.get('balance', 0)
+    if balance < upgrade_price:
+        await message.answer(f"Для улучшения до {current_level+1} уровня нужно {upgrade_price} сыроежек.")
+        return
+
+    await update_user_balance(chat_id, user_id, -upgrade_price)
+    await add_item_to_inventory(chat_id, user_id, item_id) # increases count by 1, which we treat as level
+
+    await message.answer(f"📈 Вы успешно улучшили бизнес <b>{ITEMS[item_id]['name']}</b> до {current_level+1} уровня за {upgrade_price} сыроежек!")
