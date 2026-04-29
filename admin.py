@@ -3,8 +3,7 @@ import time
 from config import CREATOR_ID
 from aiogram import Router, types, F, Bot
 from aiogram.filters import Command
-from datetime import time
-from config import CREATOR_IDdelta
+from datetime import timedelta
 from escape import escape_html
 from user_manager import get_user_data, update_user_field
 
