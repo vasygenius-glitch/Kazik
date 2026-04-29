@@ -8,17 +8,16 @@ from escape import escape_html
 router = Router()
 
 ITEMS = {
-    "lada": {"name": "🚗 Lada Priora", "price": 250000, "action": "car", "income": 1500},
-    "bmw": {"name": "🚕 BMW M5", "price": 1500000, "action": "car", "income": 10000},
-    "bugatti": {"name": "🏎 Bugatti Chiron", "price": 10000000, "action": "car", "income": 100000},
-    "vip": {"name": "💎 Статус VIP", "price": 5000000, "action": "vip"},
-    "shawarma": {"name": "🏪 Ларёк с шаурмой", "price": 100000, "action": "business", "income": 10000},
-    "carwash": {"name": "🚿 Автомойка", "price": 500000, "action": "business", "income": 60000},
-    "restaurant": {"name": "🍽 Ресторан", "price": 2000000, "action": "business", "income": 300000},
-    "dealership": {"name": "🚙 Автосалон", "price": 10000000, "action": "business", "income": 1500000},
-    "casino": {"name": "🎰 Казино", "price": 50000000, "action": "business", "income": 10000000},
-    "mute": {"name": "Мут 5 минут", "price": 15000, "action": "мут 5 минут"},
-    "unwarn": {"name": "Снять варн", "price": 10000, "action": "снять варн"}
+    "lada": {"name": "🚗 Lada Priora", "price": 2500000, "action": "car", "income": 15000},
+    "bmw": {"name": "🚕 BMW M5", "price": 15000000, "action": "car", "income": 100000},
+    "bugatti": {"name": "🏎 Bugatti Chiron", "price": 100000000, "action": "car", "income": 1000000},
+    "vip": {"name": "💎 Статус VIP", "price": 50000000, "action": "vip"},
+    "shawarma": {"name": "🏪 Ларёк с шаурмой", "price": 1000000, "action": "business", "income": 100000},
+    "carwash": {"name": "🚿 Автомойка", "price": 5000000, "action": "business", "income": 600000},
+    "restaurant": {"name": "🍽 Ресторан", "price": 20000000, "action": "business", "income": 3000000},
+    "dealership": {"name": "🚙 Автосалон", "price": 100000000, "action": "business", "income": 15000000},
+    "casino": {"name": "🎰 Казино", "price": 500000000, "action": "business", "income": 100000000},
+    "unwarn": {"name": "Снять варн", "price": 1000000, "action": "unwarn"}
 }
 
 def get_shop_keyboard():
@@ -132,32 +131,22 @@ async def use_item(message: types.Message, item_id: str, bot: Bot = None):
 
     chat_id = message.chat.id
     user_id = message.from_user.id
+    target_id = message.reply_to_message.from_user.id
 
     if await remove_item_from_inventory(chat_id, user_id, item_id):
-        from config import CREATOR_ID
-
-        target_name = escape_html(message.reply_to_message.from_user.full_name)
-        target_id = message.reply_to_message.from_user.id
-        sender_name = escape_html(message.from_user.full_name)
-        action_name = ITEMS[item_id]['action']
-
-        if CREATOR_ID and CREATOR_ID != 0 and bot:
-            try:
-                await bot.send_message(
-                    chat_id=CREATOR_ID,
-                    text=(
-                        f"🚨 <b>Использование предмета из магазина!</b>\n\n"
-                        f"Игрок: <b>{sender_name}</b> (<code>{user_id}</code>)\n"
-                        f"Применил: <b>{action_name}</b>\n"
-                        f"На игрока: <b>{target_name}</b> (<code>{target_id}</code>)\n"
-                        f"Чат ID: <code>{chat_id}</code>\n"
-                        f"Ссылка на сообщение: {message.reply_to_message.get_url() if message.reply_to_message.get_url() else 'Нет'}"
-                    )
-                )
-            except Exception as e:
-                print(f"Не удалось отправить лог создателю: {e}")
-
-        await message.answer("✅ Запрос на применение предмета отправлен администратору бота.")
+        if item_id == "unwarn":
+            from user_manager import get_user_data, update_user_field
+            data = await get_user_data(chat_id, target_id)
+            warns = data.get('warns', [])
+            if warns:
+                warns.pop()
+                await update_user_field(chat_id, target_id, 'warns', warns)
+                await message.answer(f"✅ Одно предупреждение успешно снято с пользователя!")
+            else:
+                await add_item_to_inventory(chat_id, user_id, item_id) # Возвращаем предмет
+                await message.answer("У этого пользователя нет предупреждений. Предмет возвращен в инвентарь.")
+        else:
+            await message.answer("✅ Предмет применен.")
     else:
         await message.answer(f"У вас нет предмета '{ITEMS[item_id]['name']}'. Купите его в /shop")
 

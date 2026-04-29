@@ -69,17 +69,32 @@ async def check_and_give_bonus(chat_id, user_id, full_name=None):
         ref = get_user_ref(chat_id, user_id)
         is_vip = data.get('is_vip', False)
 
+        bank_deposit = data.get('bank_deposit', 0)
+        bank_income = 0
+
+        # Give base bonus AND bank income only once a day
         base_bonus = 0
         if current_time - data.get('last_daily_time', 0) >= 86400:
             base_bonus = 1000 if is_vip else 450
+            if bank_deposit > 0:
+                if bank_deposit <= 100000000:
+                    bank_income = int(bank_deposit * 0.02)
+                elif bank_deposit <= 1000000000:
+                    bank_income = int(bank_deposit * 0.01)
+                else:
+                    bank_income = int(bank_deposit * 0.005)
+                await ref.update({'bank_deposit': bank_deposit + bank_income})
             await ref.update({'last_daily_time': current_time})
+
 
         from shop import ITEMS
         from economy_utils import get_global_tax
 
+
         tax_percent = await get_global_tax()
         negotiation_level = data.get('skills', {}).get('negotiation', 0)
         tax_percent = max(0, tax_percent - negotiation_level)
+
 
         business_income = 0
         car_income = 0

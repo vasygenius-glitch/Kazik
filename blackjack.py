@@ -50,11 +50,6 @@ async def cmd_bj(message: types.Message):
         if bet < 100:
             await message.answer("Минимальная ставка — 100 сыроежек.")
             return
-        if bet > 50000000:
-            await message.answer("Максимальная ставка — 50 000 000 сыроежек.")
-            return
-            await message.answer("Минимальная ставка — 100 сыроежек.")
-            return
     except ValueError:
         await message.answer("Ставка должна быть числом.")
         return

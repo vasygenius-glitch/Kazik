@@ -44,11 +44,6 @@ async def cmd_roulette(message: types.Message):
         if bet < 100:
             await message.answer("Минимальная ставка — 100 сыроежек.")
             return
-        if bet > 50000000:
-            await message.answer("Максимальная ставка — 50 000 000 сыроежек.")
-            return
-            await message.answer("Минимальная ставка — 100 сыроежек.")
-            return
         if not (1 <= guess <= 36):
             await message.answer("Число должно быть от 1 до 36.")
             return
