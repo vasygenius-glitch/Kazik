@@ -57,34 +57,70 @@ BUSINESSES = {
 }
 
 async def check_and_give_bonus(chat_id, user_id, full_name=None):
+    import time
     data = await get_user_data(chat_id, user_id, full_name)
     if data.get('is_banned', False):
-        return False, 0
+        return False, {}
 
     last_bonus = data.get('last_bonus_time', 0)
     current_time = time.time()
 
-    if current_time - last_bonus >= 86400:
+    if current_time - last_bonus >= 3600: # 1 hour for businesses
         ref = get_user_ref(chat_id, user_id)
         is_vip = data.get('is_vip', False)
-        base_bonus = 1000 if is_vip else 450
 
-        # Calculate business income
+        base_bonus = 0
+        if current_time - data.get('last_daily_time', 0) >= 86400:
+            base_bonus = 1000 if is_vip else 450
+            await ref.update({'last_daily_time': current_time})
+
+        from shop import ITEMS
+        from economy_utils import get_global_tax
+
+        tax_percent = await get_global_tax()
+        negotiation_level = data.get('skills', {}).get('negotiation', 0)
+        tax_percent = max(0, tax_percent - negotiation_level)
+
         business_income = 0
+        car_income = 0
         inventory = data.get('inventory', {})
-        for item, count in inventory.items():
-            if item in BUSINESSES:
-                business_income += BUSINESSES[item] * count
 
-        total_bonus = base_bonus + business_income
+        for item_id, count in inventory.items():
+            item_info = ITEMS.get(item_id)
+            if not item_info:
+                continue
+            if item_info.get('action') == 'business':
+                level = min(count, 10)
+                business_income += item_info.get('income', 0) * level
+            elif item_info.get('action') == 'car':
+                car_income += item_info.get('income', 0) * count
 
-        new_balance = data.get('balance', 500) + total_bonus
+        gross_income = business_income + car_income
+        tax_amount = int(gross_income * (tax_percent / 100.0))
+        net_income = gross_income - tax_amount
+
+        total_profit = base_bonus + net_income
+
+        new_balance = data.get('balance', 500) + total_profit
         await ref.update({
             'balance': new_balance,
             'last_bonus_time': current_time
         })
-        return True, total_bonus
-    return False, 0
+
+        receipt = {
+            'base': base_bonus,
+            'business': business_income,
+            'car': car_income,
+            'gross': gross_income,
+            'tax_percent': tax_percent,
+            'tax_amount': tax_amount,
+            'net': net_income,
+            'total': total_profit
+        }
+
+        return True, receipt
+    return False, {}
+
 
 async def add_item_to_inventory(chat_id, user_id, item_name):
     ref = get_user_ref(chat_id, user_id)

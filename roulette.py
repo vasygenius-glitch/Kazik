@@ -10,13 +10,15 @@ from escape import escape_html
 
 router = Router()
 
-async def schedule_delete(msg):
+async def schedule_delete(*messages):
+    import asyncio
     await asyncio.sleep(40)
-    try:
-        if hasattr(msg, 'delete'):
-            await msg.delete()
-    except:
-        pass
+    for msg in messages:
+        try:
+            if msg and hasattr(msg, 'delete'):
+                await msg.delete()
+        except:
+            pass
 
 secure_random = secrets.SystemRandom()
 
@@ -54,8 +56,8 @@ async def cmd_roulette(message: types.Message):
         await message.answer("Ставка и число должны быть целыми числами.")
         return
 
-    bonus_given, bonus_amount = await check_and_give_bonus(chat_id, user_id, full_name)
-    bonus_text = f"🎁 Вы получили ежедневный бонус: {bonus_amount} сыроежек!\n" if bonus_given else ""
+    bonus_given, receipt = await check_and_give_bonus(chat_id, user_id, full_name)
+    bonus_text = f"🎁 Вы получили ежедневный бонус: {receipt.get('total', 0)} сыроежек!\n" if bonus_given else ""
 
     # Re-fetch data after bonus check
     data = await get_user_data(chat_id, user_id, full_name)
@@ -124,4 +126,4 @@ async def cmd_roulette(message: types.Message):
     )
 
     msg = await message.answer(text)
-    asyncio.create_task(schedule_delete(msg))
+    asyncio.create_task(schedule_delete(msg, message))
