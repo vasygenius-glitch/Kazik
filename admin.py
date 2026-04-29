@@ -123,8 +123,40 @@ async def cmd_demote(message: types.Message, bot: Bot):
     if target_rank >= user_rank and int(user_id) != int(CREATOR_ID):
          return await message.answer("Вы не можете понизить пользователя с равным или большим рангом.")
 
+    if target_rank <= 1:
+        await update_user_field(chat_id, target.id, 'admin_rank', 0)
+        return await message.answer(f"🔻 Пользователь <b>{escape_html(target.full_name)}</b> лишен ранга администратора.")
+
+    await update_user_field(chat_id, target.id, 'admin_rank', target_rank - 1)
+    await message.answer(f"🔻 Пользователь <b>{escape_html(target.full_name)}</b> понижен до {target_rank - 1} ранга.")
+
+@router.message(F.text.lower().startswith("!снять") | F.text.lower().startswith("снять"))
+async def cmd_remove_admin(message: types.Message, bot: Bot):
+    if not message.reply_to_message:
+        return await message.answer("Ответьте на сообщение пользователя для снятия.")
+
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    target = message.reply_to_message.from_user
+
+    user_rank = await get_user_rank(chat_id, user_id)
+
+    try:
+        member = await bot.get_chat_member(chat_id, user_id)
+        is_tg_admin = member.status in ['administrator', 'creator']
+    except:
+        is_tg_admin = False
+
+    if not is_tg_admin and user_rank < 3 and int(user_id) != int(CREATOR_ID):
+        return await message.answer("У вас нет прав для снятия админки (нужен ранг 3+ или права Создателя).")
+
+    target_rank = await get_user_rank(chat_id, target.id)
+    if target_rank >= user_rank and int(user_id) != int(CREATOR_ID):
+         return await message.answer("Вы не можете снять пользователя с равным или большим рангом.")
+
     await update_user_field(chat_id, target.id, 'admin_rank', 0)
-    await message.answer(f"🔻 Пользователь <b>{escape_html(target.full_name)}</b> разжалован и лишен ранга администратора.")
+    await message.answer(f"❌ Пользователь <b>{escape_html(target.full_name)}</b> полностью лишен всех прав администратора.")
+
 
 @router.message(F.text.lower().startswith("!админы") | F.text.lower().startswith("админы") | F.text.lower().startswith("кто админ"))
 async def cmd_admins_list(message: types.Message):

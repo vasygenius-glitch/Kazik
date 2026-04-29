@@ -16,6 +16,9 @@ from log_system import router as log_system_router
 from chat_stats import router as chat_stats_router, increment_message_count
 from rp_clans import router as rp_clans_router
 from profile_bank import router as profile_bank_router
+from group_management import router as group_management_router
+from pets import router as pets_router
+from economy_features import router as economy_features_router
 
 from aiogram import Router
 from aiogram.types import Message
@@ -60,4 +63,7 @@ def register_all_handlers(dp: Dispatcher):
     dp.include_router(chat_stats_router)
     dp.include_router(rp_clans_router)
     dp.include_router(profile_bank_router)
+    dp.include_router(group_management_router)
+    dp.include_router(pets_router)
+    dp.include_router(economy_features_router)
     dp.include_router(catch_all_router)

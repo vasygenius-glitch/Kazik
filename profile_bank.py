@@ -44,20 +44,55 @@ async def cmd_profile(message: types.Message):
     stats_doc = await db.collection('chats').document(str(chat_id)).collection('stats').document(str(target_id)).get()
     msg_count = stats_doc.to_dict().get('all_time', 0) if stats_doc.exists else 0
 
+    bio = escape_html(data.get('bio', 'Нет описания.'))
+
+    pet_text = "Нет"
+    pet_data = data.get('pet')
+    if pet_data:
+        from pets import PETS_SHOP
+        import time
+        if int(time.time()) - pet_data.get('last_fed', 0) > 86400 * 2:
+            pet_text = "Сбежал 😢"
+            # Actual removal will happen when user tries to feed or use bonus
+        else:
+            pet_info = PETS_SHOP.get(pet_data['id'])
+            if pet_info:
+                status = "🟢 Сыт" if int(time.time()) - pet_data.get('last_fed', 0) < 86400 else "🔴 Голоден"
+                pet_text = f"{pet_info['name']} ({status})"
+
     text = (
-        f"👤 <b>Профиль: {target_name}</b>\n"
-        f"Статус: {vip_status}\n"
-        f"Репутация: {rep} 📈\n"
-        f"Предупреждения: {warns}/3 ⚠️\n\n"
+        f"👤 <b>Профиль: {target_name}</b>
+"
+        f"<i>{bio}</i>
 
-        f"💰 Баланс: {balance} сыр.\n"
-        f"🏦 В банке: {bank_deposit} сыр.\n\n"
+"
+        f"Статус: {vip_status}
+"
+        f"Репутация: {rep} 📈
+"
+        f"Предупреждения: {warns}/3 ⚠️
 
-        f"🛡 Клан: {clan}\n"
-        f"💍 Брак: {partner_text}\n\n"
+"
 
-        f"🚗 Машин: {cars}\n"
-        f"🏢 Бизнесов: {biz}\n\n"
+        f"💰 Баланс: {balance} сыр.
+"
+        f"🏦 В банке: {bank_deposit} сыр.
+
+"
+
+        f"🛡 Клан: {clan}
+"
+        f"💍 Брак: {partner_text}
+"
+        f"🐾 Питомец: {pet_text}
+
+"
+
+        f"🚗 Машин: {cars}
+"
+        f"🏢 Бизнесов: {biz}
+
+"
 
         f"💬 Сообщений в чате: {msg_count}"
     )
