@@ -83,5 +83,18 @@ class WhitelistMiddleware(BaseMiddleware):
 
             return
 
-        # Проверка прав убрана. Бот работает в группах без ограничений
-        return await handler(event, data)
+        # ПРОВЕРКА ПРАВ
+        bot = data.get('bot')
+        if bot and chat.type in ["group", "supergroup"]:
+            try:
+                member = await bot.get_chat_member(chat_id=chat.id, user_id=bot.id)
+                if member.status not in ["administrator", "creator"] or not member.can_delete_messages or not member.can_restrict_members or not member.can_pin_messages:
+                    if isinstance(event, Message) and event.text and event.text.startswith('/'):
+                        await bot.send_message(
+                            chat_id=chat.id,
+                            text="❌ <b>У меня нет полных прав администратора!</b>\n\nДля моей работы необходимо выдать права на:\n- Удаление сообщений\n- Блокировку пользователей\n- Закрепление сообщений\n\nПожалуйста, выдайте права и попробуйте снова."
+                        )
+                    return
+            except Exception as e:
+                print(f"Rights Check Error: {e}")
+                return

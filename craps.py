@@ -6,12 +6,15 @@ from user_manager import get_user_data, update_user_balance
 
 router = Router()
 
-async def schedule_delete(message: types.Message, delay: int = 40):
+async def schedule_delete(*messages, delay: int = 40):
+    import asyncio
     await asyncio.sleep(delay)
-    try:
-        await message.delete()
-    except Exception:
-        pass
+    for msg in messages:
+        try:
+            if msg and hasattr(msg, 'delete'):
+                await msg.delete()
+        except:
+            pass
 
 @router.message(Command("craps"))
 async def cmd_craps(message: types.Message):
@@ -30,8 +33,8 @@ async def cmd_craps(message: types.Message):
     user_id = message.from_user.id
     data = await get_user_data(chat_id, user_id)
 
-    if data.get('balance', 0) < bet:
-        return await message.answer("Недостаточно сыроежек на балансе!")
+    if data.get('balance', 0) - bet < -5000:
+        return await message.answer("Ваш кредитный лимит (-5000) исчерпан. Пополните баланс.")
 
     rand = secrets.SystemRandom()
     die1 = rand.randint(1, 6)
@@ -56,4 +59,4 @@ async def cmd_craps(message: types.Message):
             text += f"❌ Вы не выкинули поинт. Проиграно <b>{bet}</b> сыроежек."
 
     msg = await message.answer(text)
-    asyncio.create_task(schedule_delete(msg))
+    asyncio.create_task(schedule_delete(msg, message))
