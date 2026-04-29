@@ -61,39 +61,18 @@ async def cmd_profile(message: types.Message):
                 pet_text = f"{pet_info['name']} ({status})"
 
     text = (
-        f"👤 <b>Профиль: {target_name}</b>
-"
-        f"<i>{bio}</i>
-
-"
-        f"Статус: {vip_status}
-"
-        f"Репутация: {rep} 📈
-"
-        f"Предупреждения: {warns}/3 ⚠️
-
-"
-
-        f"💰 Баланс: {balance} сыр.
-"
-        f"🏦 В банке: {bank_deposit} сыр.
-
-"
-
-        f"🛡 Клан: {clan}
-"
-        f"💍 Брак: {partner_text}
-"
-        f"🐾 Питомец: {pet_text}
-
-"
-
-        f"🚗 Машин: {cars}
-"
-        f"🏢 Бизнесов: {biz}
-
-"
-
+        f"👤 <b>Профиль: {target_name}</b>\n"
+        f"<i>{bio}</i>\n\n"
+        f"Статус: {vip_status}\n"
+        f"Репутация: {rep} 📈\n"
+        f"Предупреждения: {warns}/3 ⚠️\n\n"
+        f"💰 Баланс: {balance} сыр.\n"
+        f"🏦 В банке: {bank_deposit} сыр.\n\n"
+        f"🛡 Клан: {clan}\n"
+        f"💍 Брак: {partner_text}\n"
+        f"🐾 Питомец: {pet_text}\n\n"
+        f"🚗 Машин: {cars}\n"
+        f"🏢 Бизнесов: {biz}\n\n"
         f"💬 Сообщений в чате: {msg_count}"
     )
 

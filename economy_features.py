@@ -1,6 +1,7 @@
 import time
 import secrets
 from aiogram import Router, types, F, Bot
+from aiogram.filters import Command
 from db import get_db
 from escape import escape_html
 from user_manager import get_user_data, update_user_balance
@@ -95,9 +96,7 @@ async def cmd_dictor(message: types.Message):
 
     import secrets
     answer = secrets.choice(responses)
-    await message.answer(f"🔮 <b>Диктор отвечает:</b>
-
-{answer}")
+    await message.answer(f"🔮 <b>Диктор отвечает:</b>\n\n{answer}")
 
 
 
@@ -146,16 +145,10 @@ async def cmd_lottery(message: types.Message, bot: Bot):
     builder.button(text="Участвовать 🎟", callback_data=f"lottery_join_{lottery_id}")
 
     msg = await message.answer(
-        f"🎉 <b>НОВАЯ ЛОТЕРЕЯ!</b> 🎉
-
-"
-        f"Призовой фонд: <b>{amount}</b> сыроежек!
-"
-        f"Победителей: <b>{winners_count}</b>
-"
-        f"Итоги через: <b>{minutes}</b> мин.
-
-"
+        f"🎉 <b>НОВАЯ ЛОТЕРЕЯ!</b> 🎉\n\n"
+        f"Призовой фонд: <b>{amount}</b> сыроежек!\n"
+        f"Победителей: <b>{winners_count}</b>\n"
+        f"Итоги через: <b>{minutes}</b> мин.\n\n"
         f"Жмите кнопку ниже, чтобы участвовать!",
         reply_markup=builder.as_markup()
     )
@@ -185,17 +178,9 @@ async def cmd_lottery(message: types.Message, bot: Bot):
 
         await bot.send_message(
             chat_id,
-            f"🎊 <b>ИТОГИ ЛОТЕРЕИ!</b> 🎊
-
-"
-            f"Призовой фонд <b>{amount}</b> был разделен между {actual_winners} счастливчиками!
-
-"
-            f"Победители:
-" + "
-".join(winners_names) + f"
-
-"
+            f"🎊 <b>ИТОГИ ЛОТЕРЕИ!</b> 🎊\n\n"
+            f"Призовой фонд <b>{amount}</b> был разделен между {actual_winners} счастливчиками!\n\n"
+            f"Победители:\n" + "\n".join(winners_names) + f"\n\n"
             f"Каждый получил по <b>{prize_per_winner}</b> сыроежек!"
         )
 
