@@ -35,8 +35,22 @@ async def increment_message_count(chat_id: int, user_id: int, full_name: str):
 @router.message(Command("top"))
 async def cmd_top(message: types.Message):
     args = message.text.split()
+    chat_id = message.chat.id
+
     if len(args) < 2:
-        return await message.answer("Использование: <code>/top all</code> | <code>/top week</code> | <code>/top old</code> | <code>/top young</code>")
+        from user_manager import get_top_users
+        top_users = await get_top_users(chat_id, limit=10)
+
+        if not top_users:
+            return await message.answer("🏆 Топ игроков пуст.")
+
+        text = "🏆 <b>Топ-10 богачей чата:</b>\n\n"
+        for i, user in enumerate(top_users, start=1):
+            vip_icon = " 👑" if user.get('is_vip') else ""
+            text += f"{i}. {escape_html(user.get('full_name', 'Unknown'))}{vip_icon} — <b>{user.get('balance', 0)}</b> сыроежек\n"
+
+        text += "\n<i>Используйте /top week, /top all, /top old, /top young для топов активности.</i>"
+        return await message.answer(text)
 
     mode = args[1].lower()
     chat_id = message.chat.id

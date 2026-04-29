@@ -28,30 +28,50 @@ async def cmd_start(message: types.Message):
 @router.message(Command("help"))
 async def cmd_help(message: types.Message):
     text = (
-        "📜 <b>Список базовых команд:</b>\n\n"
-        "💰 <b>Экономика:</b>\n"
-        "<code>/balance</code> — Проверить свой баланс и статус.\n"
-        "<code>/top</code> — Топ-10 богачей чата.\n"
-        "<code>/shop</code> — Магазин бизнесов и привилегий.\n"
-        "<code>/upgrade &lt;id&gt;</code> — Прокачать бизнес (до 10 ур).\n"
-        "<code>/skills</code> — Меню прокачки навыков.\n"
-        "<code>/bonus</code> — Сбор дохода (раз в час) и ежедневный бонус.\n"
-        "<code>/work</code> — Легальный заработок.\n"
-        "<code>/crime</code> — Рискованный заработок (ограбление).\n"
-        "<code>/pay &lt;сумма&gt; &lt;reply&gt;</code> — Перевод денег.\n\n"
-        "🎰 <b>Игры:</b>\n"
-        "<code>/bj &lt;ставка&gt;</code> — Блэкджек.\n"
-        "<code>/slots &lt;ставка&gt;</code> — Слоты.\n"
-        "<code>/roulette &lt;ставка&gt; &lt;число/цвет&gt;</code> — Рулетка.\n"
-        "<code>/cups &lt;ставка&gt;</code> — Наперстки.\n"
-        "<code>/dice &lt;ставка&gt;</code> — Кости.\n"
-        "<code>/craps &lt;ставка&gt;</code> — Крэпс.\n"
-        "<code>/baccarat &lt;ставка&gt;</code> — Баккара.\n\n"
-        "💡 <b>Механики:</b>\n"
-        "— Вы можете уходить в минус (до -5000 сыроежек).\n"
-        "— При долгах к вам могут наведаться коллекторы!\n"
-        "— Лимит бизнесов: 2 (для VIP - 4).\n"
-        "— При переводах взимается глобальный налог, который идет на развитие экономики."
+        "📜 <b>ПОЛНЫЙ СПИСОК КОМАНД БОТА</b> 📜\n\n"
+
+        "💰 <b>ЭКОНОМИКА И БАНК:</b>\n"
+        "<code>/profile</code> — Ваш полный профиль (деньги, клан, брак, варны).\n"
+        "<code>/bank deposit [сумма]</code> — Положить деньги в банк.\n"
+        "<code>/bank withdraw [сумма]</code> — Снять деньги из банка.\n"
+        "<code>/bonus</code> — Собрать прибыль с бизнесов, банка и получить дневной бонус.\n"
+        "<code>/work</code> — Работать (легально).\n"
+        "<code>/crime</code> — Рискованное ограбление.\n"
+        "<code>/pay [сумма] [реплай]</code> — Перевод денег другому игроку (с учетом налога).\n\n"
+
+        "🛒 <b>МАГАЗИН И ПРОКАЧКА:</b>\n"
+        "<code>/shop</code> — Магазин бизнесов, машин и VIP-статуса.\n"
+        "<code>/upgrade [название]</code> — Улучшить бизнес до 10 уровня.\n"
+        "<code>/skills</code> — Меню прокачки RPG навыков (Удача, Скрытность, Бизнесмен).\n\n"
+
+        "🛡 <b>КЛАНЫ И СЕМЬИ:</b>\n"
+        "<code>/clan</code> — Меню кланов (создать, пригласить, выгнать).\n"
+        "<code>Брак</code> или <code>/marry</code> [реплай] — Сделать предложение.\n"
+        "<code>Развод</code> — Расторгнуть брак.\n"
+        "<code>Подарок [сумма]</code> [реплай на свадьбу] — Подарить молодоженам деньги.\n\n"
+
+        "🎰 <b>ИГРЫ:</b>\n"
+        "<code>/bj [ставка]</code> — Блэкджек.\n"
+        "<code>/slots [ставка]</code> — Слоты.\n"
+        "<code>/roulette [ставка] [число/цвет]</code> — Рулетка.\n"
+        "<code>Дуэль [ставка]</code> [реплай] — Вызвать игрока на кубиках.\n"
+        "(Также доступны: /cups, /dice, /craps, /baccarat).\n\n"
+
+        "📊 <b>ТОПЫ (Обновляются каждое воскресенье):</b>\n"
+        "<code>/top</code> — Топ богачей.\n"
+        "<code>/top week</code> — Топ активности (сообщений) за неделю.\n"
+        "<code>/top all</code> — Топ сообщений за всё время.\n\n"
+
+        "👮‍♂️ <b>АДМИНИСТРИРОВАНИЕ:</b>\n"
+        "<code>мут [время] [причина]</code> [реплай] — Замутить.\n"
+        "<code>бан [причина]</code> [реплай] — Забанить.\n"
+        "<code>варн [время] [причина]</code> [реплай] — Выдать предупреждение (3 варна = бан).\n"
+        "<code>повысить [1-5]</code> [реплай] — Выдать модератора.\n"
+        "<code>кто админ</code> — Список администраторов.\n\n"
+
+        "🎭 <b>РП-КОМАНДЫ (Реплаем):</b>\n"
+        "<code>Обнять</code>, <code>Поцеловать</code>, <code>Ударить</code>, <code>Кусь</code>, <code>Погладить</code>.\n"
+        "Для повышения репутации (кармы) пишите: <code>+</code>, <code>спасибо</code>, <code>реп</code>."
     )
     await message.answer(text)
 
@@ -266,17 +286,4 @@ async def cmd_crime(message: types.Message):
         await update_user_balance(chat_id, user_id, -fine)
         await message.answer(f"🚔 Вас поймала полиция! Вы заплатили штраф в размере <b>{fine}</b> сыроежек.")
 
-@router.message(Command("top"))
-async def cmd_top(message: types.Message):
-    chat_id = message.chat.id
-    top_users = await get_top_users(chat_id, limit=10)
 
-    if not top_users:
-        return await message.answer("🏆 Топ игроков пуст.")
-
-    text = "🏆 <b>Топ-10 богачей чата:</b>\n\n"
-    for i, user in enumerate(top_users, start=1):
-        vip_icon = " 👑" if user.get('is_vip') else ""
-        text += f"{i}. {escape_html(user.get('full_name', 'Unknown'))}{vip_icon} — <b>{user.get('balance', 0)}</b> сыроежек\n"
-
-    await message.answer(text)
