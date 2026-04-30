@@ -89,9 +89,16 @@ async def callback_marry(callback: types.CallbackQuery):
     action = callback.data.split("_")[1]
     marriage_id = callback.data.replace(f"marry_{action}_", "")
     parts = marriage_id.split("_")
-    chat_id = int(parts[0])
-    proposer_id = int(parts[1])
-    target_id = int(parts[2])
+
+    # Handle negative chat_id (supergroups) correctly when splitting by '_'
+    if not parts[0]:
+        chat_id = -int(parts[1])
+        proposer_id = int(parts[2])
+        target_id = int(parts[3])
+    else:
+        chat_id = int(parts[0])
+        proposer_id = int(parts[1])
+        target_id = int(parts[2])
 
     if callback.from_user.id != target_id:
         return await callback.answer("Это предложение не для вас!", show_alert=True)
@@ -233,9 +240,16 @@ async def callback_duel(callback: types.CallbackQuery):
     action = callback.data.split("_")[1]
     duel_id = callback.data.replace(f"duel_{action}_", "")
     parts = duel_id.split("_")
-    chat_id = int(parts[0])
-    proposer_id = int(parts[1])
-    target_id = int(parts[2])
+
+    # Handle negative chat_id (supergroups) correctly when splitting by '_'
+    if not parts[0]:
+        chat_id = -int(parts[1])
+        proposer_id = int(parts[2])
+        target_id = int(parts[3])
+    else:
+        chat_id = int(parts[0])
+        proposer_id = int(parts[1])
+        target_id = int(parts[2])
 
     if callback.from_user.id != target_id:
         return await callback.answer("Вас не вызывали на эту дуэль!", show_alert=True)

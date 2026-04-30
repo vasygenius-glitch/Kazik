@@ -9,7 +9,7 @@ from config import CREATOR_ID
 
 router = Router()
 
-@router.message(F.text.lower().startswith("украсть") | F.text.lower().startswith("/steal"))
+@router.message(F.text & (F.text.lower().startswith("украсть") | F.text.lower().startswith("/steal")))
 async def cmd_steal(message: types.Message, bot: Bot):
     if not message.reply_to_message:
         return await message.answer("Сделайте реплай на сообщение того, кого хотите ограбить.")

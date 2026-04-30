@@ -105,7 +105,7 @@ async def get_note(message: types.Message):
         await message.answer(text)
 
 # 3. АВТОМОДЕРАЦИЯ (Антилинк)
-@router.message(F.text.lower().in_(["антилинк вкл", "антилинк выкл"]))
+@router.message(F.text & F.text.lower().in_(["антилинк вкл", "антилинк выкл"]))
 async def toggle_antilink(message: types.Message, bot: Bot):
     chat_id = message.chat.id
     user_id = message.from_user.id
@@ -146,7 +146,7 @@ async def antilink_check(message: types.Message, bot: Bot):
         except: pass
 
 # 4. БИО ПРОФИЛЯ
-@router.message(F.text.lower().startswith("/bio ") | F.text.lower().startswith("био "))
+@router.message(F.text & (F.text.lower().startswith("/bio ") | F.text.lower().startswith("био ")))
 async def set_bio(message: types.Message):
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2: return
@@ -158,7 +158,7 @@ async def set_bio(message: types.Message):
 
 
 # 5. АНТИВОЙС
-@router.message(F.text.lower().in_(["антивойс вкл", "антивойс выкл"]))
+@router.message(F.text & F.text.lower().in_(["антивойс вкл", "антивойс выкл"]))
 async def toggle_antivoice(message: types.Message, bot: Bot):
     chat_id = message.chat.id
     user_id = message.from_user.id

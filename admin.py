@@ -58,7 +58,7 @@ async def check_admin_immunity(bot: Bot, chat_id: int, user_id: int, target_id: 
         pass
     return False
 
-@router.message(F.text.lower().startswith("!повысить") | F.text.lower().startswith("повысить"))
+@router.message(F.text & (F.text.lower().startswith("!повысить") | F.text.lower().startswith("повысить")))
 async def cmd_promote(message: types.Message, bot: Bot):
     if not message.reply_to_message:
         return await message.answer("Ответьте на сообщение пользователя для повышения.")
@@ -99,7 +99,7 @@ async def cmd_promote(message: types.Message, bot: Bot):
     await update_user_field(chat_id, target.id, 'admin_rank', new_rank)
     await message.answer(f"✅ Пользователь <b>{escape_html(target.full_name)}</b> повышен до {new_rank} ранга администратора!")
 
-@router.message(F.text.lower().startswith("!понизить") | F.text.lower().startswith("понизить"))
+@router.message(F.text & (F.text.lower().startswith("!понизить") | F.text.lower().startswith("понизить")))
 async def cmd_demote(message: types.Message, bot: Bot):
     if not message.reply_to_message:
         return await message.answer("Ответьте на сообщение пользователя для понижения.")
@@ -130,7 +130,7 @@ async def cmd_demote(message: types.Message, bot: Bot):
     await update_user_field(chat_id, target.id, 'admin_rank', target_rank - 1)
     await message.answer(f"🔻 Пользователь <b>{escape_html(target.full_name)}</b> понижен до {target_rank - 1} ранга.")
 
-@router.message(F.text.lower().startswith("!снять") | F.text.lower().startswith("снять"))
+@router.message(F.text & (F.text.lower().startswith("!снять") | F.text.lower().startswith("снять")))
 async def cmd_remove_admin(message: types.Message, bot: Bot):
     if not message.reply_to_message:
         return await message.answer("Ответьте на сообщение пользователя для снятия.")
@@ -158,7 +158,7 @@ async def cmd_remove_admin(message: types.Message, bot: Bot):
     await message.answer(f"❌ Пользователь <b>{escape_html(target.full_name)}</b> полностью лишен всех прав администратора.")
 
 
-@router.message(F.text.lower().startswith("!админы") | F.text.lower().startswith("админы") | F.text.lower().startswith("кто админ"))
+@router.message(F.text & (F.text.lower().startswith("!админы") | F.text.lower().startswith("админы") | F.text.lower().startswith("кто админ")))
 async def cmd_admins_list(message: types.Message):
     chat_id = message.chat.id
     from db import get_db
@@ -199,7 +199,7 @@ def extract_args(text: str):
         reason = " ".join(first_line[2:])
     return time_str, reason
 
-@router.message(F.text.lower().startswith("!мут") | F.text.lower().startswith("мут"))
+@router.message(F.text & (F.text.lower().startswith("!мут") | F.text.lower().startswith("мут")))
 async def cmd_mute(message: types.Message, bot: Bot):
     if not message.reply_to_message:
         return await message.answer("Ответьте на сообщение пользователя для мута.")
@@ -244,7 +244,7 @@ async def cmd_mute(message: types.Message, bot: Bot):
     except Exception as e:
         await message.answer(f"Не удалось замутить: {e}")
 
-@router.message(F.text.lower().startswith("!бан") | F.text.lower().startswith("бан"))
+@router.message(F.text & (F.text.lower().startswith("!бан") | F.text.lower().startswith("бан")))
 async def cmd_ban(message: types.Message, bot: Bot):
     if not message.reply_to_message:
         return await message.answer("Ответьте на сообщение пользователя для бана.")
@@ -280,7 +280,7 @@ async def cmd_ban(message: types.Message, bot: Bot):
     except Exception as e:
         await message.answer(f"Не удалось забанить: {e}")
 
-@router.message(F.text.lower().startswith("!варн") | F.text.lower().startswith("варн"))
+@router.message(F.text & (F.text.lower().startswith("!варн") | F.text.lower().startswith("варн")))
 async def cmd_warn(message: types.Message, bot: Bot):
     if not message.reply_to_message:
         return await message.answer("Ответьте на сообщение пользователя для предупреждения.")
@@ -340,7 +340,7 @@ async def cmd_warn(message: types.Message, bot: Bot):
         except Exception as e:
             await message.answer(f"Не удалось забанить после 3 варнов: {e}")
 
-@router.message(F.text.startswith("!снять варн"))
+@router.message(F.text & F.text.startswith("!снять варн"))
 async def cmd_unwarn_admin(message: types.Message):
     if not message.reply_to_message:
         return await message.answer("Ответьте на сообщение пользователя.")
