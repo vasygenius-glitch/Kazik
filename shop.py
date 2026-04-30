@@ -8,17 +8,16 @@ from escape import escape_html
 router = Router()
 
 ITEMS = {
-    "lada": {"name": "🚗 Lada Priora", "price": 250000, "action": "none"},
-    "bmw": {"name": "🚕 BMW M5", "price": 1500000, "action": "none"},
-    "bugatti": {"name": "🏎 Bugatti Chiron", "price": 10000000, "action": "none"},
-    "vip": {"name": "💎 Статус VIP", "price": 5000000, "action": "vip"},
-    "shawarma": {"name": "🏪 Ларёк с шаурмой", "price": 100000, "action": "business", "income": 10000},
-    "carwash": {"name": "🚿 Автомойка", "price": 500000, "action": "business", "income": 60000},
-    "restaurant": {"name": "🍽 Ресторан", "price": 2000000, "action": "business", "income": 300000},
-    "dealership": {"name": "🚙 Автосалон", "price": 10000000, "action": "business", "income": 1500000},
-    "casino": {"name": "🎰 Казино", "price": 50000000, "action": "business", "income": 10000000},
-    "mute": {"name": "Мут 5 минут", "price": 15000, "action": "мут 5 минут"},
-    "unwarn": {"name": "Снять варн", "price": 10000, "action": "снять варн"}
+    "lada": {"name": "🚗 Lada Priora", "price": 2500000, "action": "car", "income": 15000},
+    "bmw": {"name": "🚕 BMW M5", "price": 15000000, "action": "car", "income": 100000},
+    "bugatti": {"name": "🏎 Bugatti Chiron", "price": 100000000, "action": "car", "income": 1000000},
+    "vip": {"name": "💎 Статус VIP", "price": 50000000, "action": "vip"},
+    "shawarma": {"name": "🏪 Ларёк с шаурмой", "price": 1000000, "action": "business", "income": 100000},
+    "carwash": {"name": "🚿 Автомойка", "price": 5000000, "action": "business", "income": 600000},
+    "restaurant": {"name": "🍽 Ресторан", "price": 20000000, "action": "business", "income": 3000000},
+    "dealership": {"name": "🚙 Автосалон", "price": 100000000, "action": "business", "income": 15000000},
+    "casino": {"name": "🎰 Казино", "price": 500000000, "action": "business", "income": 100000000},
+    "unwarn": {"name": "Снять варн", "price": 1000000, "action": "unwarn"}
 }
 
 def get_shop_keyboard():
@@ -68,10 +67,18 @@ async def process_buy(callback: types.CallbackQuery):
     balance = data.get('balance', 0)
 
 
-    if item.get('action') == "business" or item.get('action') == "none":
+    if item.get('action') == "business":
+        is_vip = data.get('is_vip', False)
+        limit = 4 if is_vip else 2
         inventory = data.get('inventory', {})
-        if inventory.get(item_id, 0) >= 2:
-            await callback.answer(f"У вас уже есть максимальное количество (2 шт.) этого предмета!", show_alert=True)
+        business_count = sum(1 for key in inventory if ITEMS.get(key, {}).get('action') == 'business')
+
+        if item_id in inventory:
+            await callback.answer("У вас уже есть этот бизнес! Используйте /upgrade для повышения уровня.", show_alert=True)
+            return
+
+        if business_count >= limit:
+            await callback.answer("У тебя не хватает средств и влияния обеспечивать больше бизнесов! Лимит достигнут.", show_alert=True)
             return
 
     if balance < item['price']:
@@ -124,31 +131,61 @@ async def use_item(message: types.Message, item_id: str, bot: Bot = None):
 
     chat_id = message.chat.id
     user_id = message.from_user.id
+    target_id = message.reply_to_message.from_user.id
 
     if await remove_item_from_inventory(chat_id, user_id, item_id):
-        from config import CREATOR_ID
-
-        target_name = escape_html(message.reply_to_message.from_user.full_name)
-        target_id = message.reply_to_message.from_user.id
-        sender_name = escape_html(message.from_user.full_name)
-        action_name = ITEMS[item_id]['action']
-
-        if CREATOR_ID and CREATOR_ID != 0 and bot:
-            try:
-                await bot.send_message(
-                    chat_id=CREATOR_ID,
-                    text=(
-                        f"🚨 <b>Использование предмета из магазина!</b>\n\n"
-                        f"Игрок: <b>{sender_name}</b> (<code>{user_id}</code>)\n"
-                        f"Применил: <b>{action_name}</b>\n"
-                        f"На игрока: <b>{target_name}</b> (<code>{target_id}</code>)\n"
-                        f"Чат ID: <code>{chat_id}</code>\n"
-                        f"Ссылка на сообщение: {message.reply_to_message.get_url() if message.reply_to_message.get_url() else 'Нет'}"
-                    )
-                )
-            except Exception as e:
-                print(f"Не удалось отправить лог создателю: {e}")
-
-        await message.answer("✅ Запрос на применение предмета отправлен администратору бота.")
+        if item_id == "unwarn":
+            from user_manager import get_user_data, update_user_field
+            data = await get_user_data(chat_id, target_id)
+            warns = data.get('warns', [])
+            if warns:
+                warns.pop()
+                await update_user_field(chat_id, target_id, 'warns', warns)
+                await message.answer(f"✅ Одно предупреждение успешно снято с пользователя!")
+            else:
+                await add_item_to_inventory(chat_id, user_id, item_id) # Возвращаем предмет
+                await message.answer("У этого пользователя нет предупреждений. Предмет возвращен в инвентарь.")
+        else:
+            await message.answer("✅ Предмет применен.")
     else:
         await message.answer(f"У вас нет предмета '{ITEMS[item_id]['name']}'. Купите его в /shop")
+
+@router.message(Command("upgrade"))
+async def cmd_upgrade(message: types.Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    full_name = escape_html(message.from_user.full_name)
+
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("Укажите ID бизнеса из магазина: <code>/upgrade shawarma</code>")
+        return
+
+    item_id = args[1]
+    if item_id not in ITEMS or ITEMS[item_id]['action'] != 'business':
+        await message.answer("Это не бизнес. Посмотрите ID бизнесов в магазине (/shop).")
+        return
+
+    data = await get_user_data(chat_id, user_id, full_name)
+    inventory = data.get('inventory', {})
+
+    if item_id not in inventory:
+        await message.answer("У вас нет этого бизнеса.")
+        return
+
+    current_level = inventory[item_id]
+    if current_level >= 10:
+        await message.answer("Этот бизнес уже максимального уровня (10)!")
+        return
+
+    upgrade_price = ITEMS[item_id]['price'] * current_level // 2
+
+    balance = data.get('balance', 0)
+    if balance < upgrade_price:
+        await message.answer(f"Для улучшения до {current_level+1} уровня нужно {upgrade_price} сыроежек.")
+        return
+
+    await update_user_balance(chat_id, user_id, -upgrade_price)
+    await add_item_to_inventory(chat_id, user_id, item_id) # increases count by 1, which we treat as level
+
+    await message.answer(f"📈 Вы успешно улучшили бизнес <b>{ITEMS[item_id]['name']}</b> до {current_level+1} уровня за {upgrade_price} сыроежек!")

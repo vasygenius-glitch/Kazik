@@ -10,6 +10,15 @@ from promo import router as promo_router
 from dice import router as dice_router
 from craps import router as craps_router
 from baccarat import router as baccarat_router
+from skills import router as skills_router
+from admin import router as admin_router
+from log_system import router as log_system_router
+from chat_stats import router as chat_stats_router, increment_message_count
+from rp_clans import router as rp_clans_router
+from profile_bank import router as profile_bank_router
+from group_management import router as group_management_router
+from pets import router as pets_router
+from economy_features import router as economy_features_router
 
 from aiogram import Router
 from aiogram.types import Message
@@ -27,9 +36,13 @@ async def catch_all(message: Message):
         elif message.voice: media_type = "[Голосовое] "
         elif message.document: media_type = "[Файл] "
 
+
         full_text = f"{media_type}{text}"
         if full_text.strip():
             log_message(message.chat.id, message.chat.title or "Unknown", message.from_user.id, message.from_user.full_name, full_text)
+            import asyncio
+            asyncio.create_task(increment_message_count(message.chat.id, message.from_user.id, message.from_user.full_name))
+
 
 def register_all_handlers(dp: Dispatcher):
 
@@ -44,4 +57,13 @@ def register_all_handlers(dp: Dispatcher):
     dp.include_router(dice_router)
     dp.include_router(craps_router)
     dp.include_router(baccarat_router)
+    dp.include_router(skills_router)
+    dp.include_router(admin_router)
+    dp.include_router(log_system_router)
+    dp.include_router(chat_stats_router)
+    dp.include_router(rp_clans_router)
+    dp.include_router(profile_bank_router)
+    dp.include_router(group_management_router)
+    dp.include_router(pets_router)
+    dp.include_router(economy_features_router)
     dp.include_router(catch_all_router)
