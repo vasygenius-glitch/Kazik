@@ -10,13 +10,15 @@ from escape import escape_html
 
 router = Router()
 
-async def schedule_delete(msg):
+async def schedule_delete(*messages):
+    import asyncio
     await asyncio.sleep(40)
-    try:
-        if hasattr(msg, 'delete'):
-            await msg.delete()
-    except:
-        pass
+    for msg in messages:
+        try:
+            if msg and hasattr(msg, 'delete'):
+                await msg.delete()
+        except:
+            pass
 
 
 def get_bj_keyboard(game_id: str):
@@ -48,17 +50,12 @@ async def cmd_bj(message: types.Message):
         if bet < 100:
             await message.answer("Минимальная ставка — 100 сыроежек.")
             return
-        if bet > 50000000:
-            await message.answer("Максимальная ставка — 50 000 000 сыроежек.")
-            return
-            await message.answer("Минимальная ставка — 100 сыроежек.")
-            return
     except ValueError:
         await message.answer("Ставка должна быть числом.")
         return
 
-    bonus_given, bonus_amount = await check_and_give_bonus(chat_id, user_id, full_name)
-    bonus_text = f"🎁 Вы получили ежедневный бонус: {bonus_amount} сыроежек!\n" if bonus_given else ""
+    bonus_given, receipt = await check_and_give_bonus(chat_id, user_id, full_name)
+    bonus_text = f"🎁 Вы получили ежедневный бонус: {receipt.get('total', 0)} сыроежек!\n" if bonus_given else ""
 
     # Re-fetch data after bonus check
     data = await get_user_data(chat_id, user_id, full_name)
@@ -95,10 +92,11 @@ async def cmd_bj(message: types.Message):
             f"Карты дилера: {format_cards(dealer_cards)} ({dealer_score})"
         )
         msg = await message.answer(text)
-        asyncio.create_task(schedule_delete(msg))
+        asyncio.create_task(schedule_delete(msg, message))
         return
 
     active_games[game_id] = {
+        'original_msg': message,
         'user_id': user_id,
         'chat_id': chat_id,
         'full_name': full_name,
@@ -130,6 +128,17 @@ async def process_bj_hit(callback: types.CallbackQuery):
     game['player_cards'].append(get_random_card())
     player_score = calculate_score(game['player_cards'])
 
+    # Luck integration
+    from user_manager import get_user_data
+    data = await get_user_data(game['chat_id'], game['user_id'])
+    luck_level = data.get('skills', {}).get('luck', 0)
+
+    if player_score > 21 and luck_level > 0 and __import__("secrets").SystemRandom().randint(1, 100) <= luck_level * 5:
+        # Magic save! Convert the last card to a low one
+        game['player_cards'].pop()
+        game['player_cards'].append('2♠') # just a hardcoded low card for the save
+        player_score = calculate_score(game['player_cards'])
+
     if player_score > 21:
         game = active_games.pop(game_id, None)
         if not game:
@@ -139,7 +148,7 @@ async def process_bj_hit(callback: types.CallbackQuery):
             f"<b>БЛЭКДЖЕК: Игрок {game['full_name']} перебрал и проиграл {game['bet']} сыроежек.</b>"
         )
         msg = await callback.message.edit_text(text)
-        asyncio.create_task(schedule_delete(msg))
+        asyncio.create_task(schedule_delete(msg, game.get('original_msg') if 'game' in locals() and game else None))
     elif player_score == 21:
         game = active_games.pop(game_id, None)
         if game:
@@ -209,4 +218,4 @@ async def finish_dealer_turn(callback: types.CallbackQuery, game: dict):
     )
 
     msg = await callback.message.edit_text(text)
-    asyncio.create_task(schedule_delete(msg))
+    asyncio.create_task(schedule_delete(msg, game.get('original_msg') if 'game' in locals() and game else None))

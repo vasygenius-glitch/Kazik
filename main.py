@@ -72,6 +72,11 @@ async def main():
         # Удаляем вебхуки, чтобы поллинг не конфликтовал (если они случайно были)
         await bot.delete_webhook(drop_pending_updates=True)
         print("✅ Начинаю слушать сообщения (polling)...")
+        from log_system import flush_logs
+        from chat_stats import weekly_reset_task, flush_stats_task
+        asyncio.create_task(flush_logs(bot))
+        asyncio.create_task(weekly_reset_task(bot))
+        asyncio.create_task(flush_stats_task())
     except Exception as e:
         print(f"❌ Ошибка проверки токена: {e}")
 
