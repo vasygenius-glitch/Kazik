@@ -188,7 +188,7 @@ async def rp_and_karma(message: types.Message):
 # ================= ДУЭЛИ =================
 active_duels = {}
 
-@router.message(F.text.lower().startswith("дуэль") | F.text.lower().startswith("/duel"))
+@router.message(F.text & (F.text.lower().startswith("дуэль") | F.text.lower().startswith("/duel")))
 async def cmd_duel(message: types.Message):
     if not message.reply_to_message:
         return await message.answer("Ответьте на сообщение человека, чтобы вызвать его на дуэль.")

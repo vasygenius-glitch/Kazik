@@ -75,9 +75,9 @@ async def cmd_steal(message: types.Message, bot: Bot):
 
 
 
-@router.message(F.text.lower().startswith("диктор "))
+@router.message(F.text & F.text.lower().startswith("диктор"))
 async def cmd_dictor(message: types.Message):
-    question = message.text[7:].strip()
+    question = message.text[6:].strip()
     if not question:
         return
 
